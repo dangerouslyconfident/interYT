@@ -26,7 +26,7 @@ Polite Rejection: Won't answer completely random, unrelated questions (e.g., "wh
 
 Clone this repository to your local machine:
 
-git clone [https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git)
+git clone [https://github.com/dangerouslyconfident/interYT](https://github.com/dangerouslyconfident/interYT)
 
 
 ...or just download the ZIP and unzip it.
@@ -84,7 +84,7 @@ Click the "Load unpacked" button.
 
 Select the entire project folder from your computer.
 
-The "YouTube Q&A" extension will now appear, and its icon will be in your browser's toolbar.
+The "interYT" extension will now appear, and its icon will be in your browser's toolbar.
 
 # How to Use
 
