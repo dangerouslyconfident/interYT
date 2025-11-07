@@ -1,160 +1,194 @@
-/* * This file replaces the inline <style> and Tailwind CSS script.
- * It's required for the extension's Content Security Policy (CSP).
- */
-
-/* --- Base and Font --- */
 body {
     font-family: 'Inter', sans-serif;
     width: 450px;
-    background-color: #11111b; /* bg-[#11111b] */
-    color: #d1d5db; /* text-gray-200 */
-    /* REMOVED: padding: 1rem; */
+    background-color: #0B1117;
+    color: #E0E0E0;
     padding: 0;
     margin: 0;
 }
 
-/* --- From inline <style> block --- */
-textarea::-webkit-scrollbar {
-    width: 8px;
-}
-textarea::-webkit-scrollbar-track {
-    background: #1e1e2e; /* dark-800 */
-}
-textarea::-webkit-scrollbar-thumb {
-    background-color: #45475a; /* dark-600 */
-    border-radius: 20px;
-    border: 2px solid #1e1e2e; /* dark-800 */
-}
-.text-glow {
-    text-shadow: 0 0 15px rgba(192, 132, 252, 0.35);
+.tab-nav {
+    display: flex;
+    background-color: #1A2632;
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+    border-bottom: 1px solid #293849;
 }
 
-/* --- Recreated Tailwind Classes --- */
-.w-full { width: 100%; }
-.max-w-4xl { max-width: 80rem; }
-.bg-dark-card { background-color: #1e1e2e; } /* bg-[#1e1e2e] */
+.tab-item {
+    flex-grow: 1;
+    padding: 0.85rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    color: #7F8C9A;
+    transition: all 0.2s ease-in-out;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-item:first-child { border-top-left-radius: 1rem; }
+.tab-item:last-child { border-top-right-radius: 1rem; }
+
+.tab-item:hover {
+    background-color: #213040;
+    color: #B0BEC5;
+}
+
+.tab-item.active {
+    color: #22D3EE;
+    border-bottom-color: #22D3EE;
+}
+
+.bg-dark-card { 
+    background-color: #1D2A3A;
+    border-radius: 1rem;
+}
 .p-6 { padding: 1.5rem; }
-.rounded-2xl { border-radius: 1rem; }
-.shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
-.border-gray-700 { border: 1px solid #374151; }
+.shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4); }
+
 .mb-6 { margin-bottom: 1.5rem; }
 .text-center { text-align: center; }
-
-/* Header */
 .text-3xl { font-size: 1.875rem; }
 .font-bold { font-weight: 700; }
 .text-transparent { color: transparent; }
 .bg-clip-text { background-clip: text; }
-.bg-gradient { background-image: linear-gradient(to right, #c084fc, #ec4899); } /* from-purple-400 to-pink-500 */
+.bg-gradient { background-image: linear-gradient(to right, #22D3EE, #0EA5E9); }
+.text-glow { text-shadow: 0 0 15px rgba(34, 211, 238, 0.25); }
 .mt-2 { margin-top: 0.5rem; }
-.text-gray-400 { color: #9ca3af; }
+.text-gray-400 { color: #94A3B8; }
 
-/* Form Elements */
 .space-y-6 > * + * { margin-top: 1.5rem; }
 label.block { display: block; }
 .text-sm { font-size: 0.875rem; }
 .font-medium { font-weight: 500; }
-.text-gray-300 { color: #d1d5db; }
+.text-gray-300 { color: #E0E0E0; }
 .mb-2 { margin-bottom: 0.5rem; }
 
 textarea, input[type="text"] {
-    box-sizing: border-box; /* Ensures padding doesn't affect width */
+    box-sizing: border-box;
     width: 100%;
-    padding: 1rem; /* p-4 */
-    background-color: #181825; /* bg-[#181825] */
-    /* UPDATED: Darker default border */
-    border: 1px solid #374151; /* border-gray-700 */
-    border-radius: 0.5rem; /* rounded-lg */
-    color: #d1d5db; /* text-gray-300 */
+    padding: 1rem;
+    background-color: #1A2632;
+    border: 1px solid #293849;
+    border-radius: 0.5rem;
+    color: #E0E0E0;
     transition: all 0.2s;
 }
 
 textarea:focus, input[type="text"]:focus {
     outline: none;
-    border-color: #c084fc; /* border-purple-400 */
-    /* UPDATED: Thinner, cleaner ring */
-    box-shadow: 0 0 0 1px #c084fc; /* ring-1 ring-purple-400 */
+    border-color: #22D3EE;
+    box-shadow: 0 0 0 1px #22D3EE;
 }
 
-#transcript-status {
-    margin-top: 0.5rem; /* mt-2 */
-    font-size: 0.75rem; /* text-xs */
-    color: #6b7280; /* text-gray-500 */
+#transcript-status, #comments-status {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #7F8C9A;
 }
-/* Status colors (from popup.js) */
-#transcript-status.text-green-400 { color: #4ade80; }
-#transcript-status.text-yellow-400 { color: #facc15; }
-#transcript-status.text-red-400 { color: #f87171; }
+#transcript-status.text-green-400 { color: #34D399; }
+#transcript-status.text-yellow-400 { color: #FBBF24; }
+#transcript-status.text-red-400 { color: #F87171; }
+#comments-status.text-red-400 { color: #F87171; }
 
-/* Button */
-#ask-button {
-    background-image: linear-gradient(to right, #a855f7, #ec4899); /* from-purple-500 to-pink-500 */
+#ask-button, #fetch-comments-button {
+    background-image: linear-gradient(to right, #14B8A6, #0EA5E9);
     color: white;
     font-weight: 700;
-    padding: 0.75rem 1.5rem; /* py-3 px-6 */
+    padding: 0.75rem 1.5rem;
     border: none;
-    border-radius: 0.5rem; /* rounded-lg */
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-lg */
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     cursor: pointer;
     transition: all 0.3s ease-in-out;
 }
-#ask-button:hover {
-    background-image: linear-gradient(to right, #9333ea, #d946ef); /* hover:from-purple-600 hover:to-pink-600 */
-    transform: scale(1.05); /* hover:scale-105 */
+#ask-button:hover, #fetch-comments-button:hover {
+    background-image: linear-gradient(to right, #0F766E, #0C4A6E);
+    transform: scale(1.02);
 }
 
-/* Answer Area */
 .mt-6 { margin-top: 1.5rem; }
 .hidden { display: none; }
 .text-xl { font-size: 1.25rem; }
 .font-semibold { font-weight: 600; }
 .mb-3 { margin-bottom: 0.75rem; }
 
-/* Loader */
-#loader {
+#loader, #comments-loader {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* NEW: Use gap for spacing */
-    gap: 0.75rem; /* replaces space-x-3 */
+    gap: 0.75rem;
 }
 
-/* NEW: Single spinner element */
 .spinner {
-    width: 1.25rem; /* 20px */
-    height: 1.25rem; /* 20px */
-    border: 3px solid #45475a; /* dark-600 */
-    border-top-color: #c084fc; /* purple-400 */
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 3px solid #293849;
+    border-top-color: #22D3EE;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 
-/* Answer Text */
-#answer-text {
-    padding: 1rem; /* p-4 */
-    background-color: #181825; /* bg-[#181825] */
-    border: 1px solid #4b5563; /* border-gray-600 */
-    border-radius: 0.5rem; /* rounded-lg */
-    color: #d1d5db; /* text-gray-300 */
-    
-    /* NEW: Add a transition for the glow */
+#answer-text, #comments-list {
+    padding: 1rem;
+    background-color: #1A2632;
+    border: 1px solid #293849;
+    border-radius: 0.5rem;
+    color: #E0E0E0;
     transition: all 0.3s ease-in-out;
 }
+#comments-list {
+    padding: 0.5rem 1rem;
+}
 
-/* NEW: Add a subtle glow when the answer appears */
 #answer-text:not(:empty) {
-    border-color: #45475a; /* dark-600 */
-    box-shadow: 0 0 15px rgba(192, 132, 252, 0.1); /* Faint purple glow */
+    border-color: #293849;
+    box-shadow: 0 0 15px rgba(34, 211, 238, 0.1);
 }
 
-#answer-text p {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
+#answer-text p { margin: 0.5rem 0; }
+#answer-text .text-red-400 { color: #F87171; }
+#answer-text a { color: #22D3EE; text-decoration: none; }
+#answer-text a:hover { text-decoration: underline; }
+#answer-text strong { color: #f0f0f0; }
+
+.comment-item {
+    padding: 0.75rem;
+    border-bottom: 1px solid #293849;
 }
-#answer-text .text-red-400 { color: #f87171; }
+.comment-item:last-child {
+    border-bottom: none;
+}
+.comment-author {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #E0E0E0;
+    margin-bottom: 0.25rem;
+}
+.comment-text {
+    font-size: 0.875rem;
+    color: #B0BEC5;
+    white-space: pre-wrap;
+}
+
+textarea::-webkit-scrollbar,
+#comments-list::-webkit-scrollbar {
+    width: 8px;
+}
+textarea::-webkit-scrollbar-track,
+#comments-list::-webkit-scrollbar-track {
+    background: #1A2632;
+}
+textarea::-webkit-scrollbar-thumb,
+#comments-list::-webkit-scrollbar-thumb {
+    background-color: #4A5C70;
+    border-radius: 20px;
+    border: 2px solid #1A2632;
+}
