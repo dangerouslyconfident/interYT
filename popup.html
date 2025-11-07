@@ -79,6 +79,15 @@
                         <!-- AI's answer will appear here -->
                     </div>
                 </div>
+                
+                <!-- NEW: Q&A History -->
+                <div id="history-container" class="mt-8 hidden">
+                    <h3 class="text-lg font-semibold text-gray-300 mb-3">Recent Questions</h3>
+                    <div id="history-list" class="space-y-4 max-h-48 overflow-y-auto">
+                        <!-- History items will be injected here -->
+                    </div>
+                </div>
+
             </div>
         </div>
         
@@ -89,7 +98,7 @@
                     Video Comments
                 </h1>
                 <p class="mt-2 text-gray-400">
-                    Fetch and view the top comments from the video.
+                    Fetch and summarize the top comments from the video.
                 </p>
             </header>
 
@@ -100,15 +109,26 @@
 
                 <!-- Comments Display -->
                 <div id="comments-container" class="mt-6 hidden">
-                    <h2 class="text-xl font-semibold text-gray-200 mb-3">Top Comments:</h2>
                     
+                    <!-- NEW: Comment Summary -->
+                    <div id="comment-summary-container" class="mb-6 hidden">
+                        <h2 class="text-xl font-semibold text-gray-200 mb-3">Viewer Opinion Summary:</h2>
+                        <div id="comment-summary-loader" class="flex items-center justify-center space-x-3 hidden">
+                            <div class="spinner"></div>
+                            <span class="text-gray-400">Summarizing...</span>
+                        </div>
+                        <div id="comment-summary-text" class="p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300 prose">
+                            <!-- AI comment summary will appear here -->
+                        </div>
+                    </div>
+
+                    <!-- Existing Comments List -->
+                    <h2 class="text-xl font-semibold text-gray-200 mb-3">Top Comments:</h2>
                     <div id="comments-loader" class="flex items-center justify-center space-x-3 hidden">
                         <div class="spinner"></div>
                         <span class="text-gray-400">Fetching comments...</span>
                     </div>
-                    
                     <p id="comments-status" class="mt-2 text-xs text-gray-500 text-center"></p>
-
                     <div id="comments-list" class="space-y-4 max-h-96 overflow-y-auto">
                         <!-- Scraped comments will be injected here -->
                     </div>

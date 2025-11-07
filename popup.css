@@ -116,7 +116,7 @@ textarea:focus, input[type="text"]:focus {
 .font-semibold { font-weight: 600; }
 .mb-3 { margin-bottom: 0.75rem; }
 
-#loader, #comments-loader {
+#loader, #comments-loader, #comment-summary-loader {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -136,7 +136,7 @@ textarea:focus, input[type="text"]:focus {
     to { transform: rotate(360deg); }
 }
 
-#answer-text, #comments-list {
+#answer-text, #comments-list, #comment-summary-text {
     padding: 1rem;
     background-color: #1A2632;
     border: 1px solid #293849;
@@ -147,17 +147,47 @@ textarea:focus, input[type="text"]:focus {
 #comments-list {
     padding: 0.5rem 1rem;
 }
+#comment-summary-text {
+    font-size: 0.9rem;
+}
 
-#answer-text:not(:empty) {
+#answer-text:not(:empty), #comment-summary-text:not(:empty) {
     border-color: #293849;
     box-shadow: 0 0 15px rgba(34, 211, 238, 0.1);
 }
 
-#answer-text p { margin: 0.5rem 0; }
-#answer-text .text-red-400 { color: #F87171; }
-#answer-text a { color: #22D3EE; text-decoration: none; }
-#answer-text a:hover { text-decoration: underline; }
-#answer-text strong { color: #f0f0f0; }
+#answer-text p, #comment-summary-text p { margin: 0.5rem 0; }
+#answer-text .text-red-400, #comment-summary-text .text-red-400 { color: #F87171; }
+#answer-text a, #comment-summary-text a { color: #22D3EE; text-decoration: none; }
+#answer-text a:hover, #comment-summary-text a:hover { text-decoration: underline; }
+#answer-text strong, #comment-summary-text strong { color: #f0f0f0; }
+
+.mt-8 { margin-top: 2rem; }
+.text-lg { font-size: 1.125rem; }
+#history-list {
+    border-top: 1px solid #293849;
+    padding-top: 1rem;
+}
+.history-item {
+    padding: 0.75rem;
+    background-color: #1A2632;
+    border-radius: 0.5rem;
+    border: 1px solid #293849;
+}
+.history-question {
+    font-weight: 600;
+    color: #E0E0E0;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+.history-answer {
+    font-size: 0.875rem;
+    color: #B0BEC5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.history-answer a { color: #22D3EE; }
+.history-answer strong { color: #f0f0f0; }
 
 .comment-item {
     padding: 0.75rem;
@@ -179,15 +209,18 @@ textarea:focus, input[type="text"]:focus {
 }
 
 textarea::-webkit-scrollbar,
-#comments-list::-webkit-scrollbar {
+#comments-list::-webkit-scrollbar,
+#history-list::-webkit-scrollbar {
     width: 8px;
 }
 textarea::-webkit-scrollbar-track,
-#comments-list::-webkit-scrollbar-track {
+#comments-list::-webkit-scrollbar-track,
+#history-list::-webkit-scrollbar-track {
     background: #1A2632;
 }
 textarea::-webkit-scrollbar-thumb,
-#comments-list::-webkit-scrollbar-thumb {
+#comments-list::-webkit-scrollbar-thumb,
+#history-list::-webkit-scrollbar-thumb {
     background-color: #4A5C70;
     border-radius: 20px;
     border: 2px solid #1A2632;

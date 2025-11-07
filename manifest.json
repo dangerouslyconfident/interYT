@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "YouTube Q&A",
-    "version": "1.1",
-    "description": "Ask questions about a YouTube video transcript.",
+    "version": "1.2",
+    "description": "Ask questions about a YouTube video transcript and get comment summaries.",
     "action": {
         "default_popup": "popup.html",
         "default_icon": {
@@ -20,11 +20,16 @@
         "https://generativelanguage.googleapis.com/"
     ],
     "permissions": [
-        "tabs"
+        "tabs",
+        "storage"
     ],
     "content_scripts": [
         {
-            "matches": ["*://*.youtube.com/watch*"],
+            "matches": [
+                "*://*.youtube.com/watch*",
+                "*://*.youtube.com/shorts/*",
+                "*://*.youtube.com/live/*"
+            ],
             "js": ["content.js"]
         }
     ]
