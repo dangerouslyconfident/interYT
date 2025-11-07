@@ -1,0 +1,160 @@
+/* * This file replaces the inline <style> and Tailwind CSS script.
+ * It's required for the extension's Content Security Policy (CSP).
+ */
+
+/* --- Base and Font --- */
+body {
+    font-family: 'Inter', sans-serif;
+    width: 450px;
+    background-color: #11111b; /* bg-[#11111b] */
+    color: #d1d5db; /* text-gray-200 */
+    /* REMOVED: padding: 1rem; */
+    padding: 0;
+    margin: 0;
+}
+
+/* --- From inline <style> block --- */
+textarea::-webkit-scrollbar {
+    width: 8px;
+}
+textarea::-webkit-scrollbar-track {
+    background: #1e1e2e; /* dark-800 */
+}
+textarea::-webkit-scrollbar-thumb {
+    background-color: #45475a; /* dark-600 */
+    border-radius: 20px;
+    border: 2px solid #1e1e2e; /* dark-800 */
+}
+.text-glow {
+    text-shadow: 0 0 15px rgba(192, 132, 252, 0.35);
+}
+
+/* --- Recreated Tailwind Classes --- */
+.w-full { width: 100%; }
+.max-w-4xl { max-width: 80rem; }
+.bg-dark-card { background-color: #1e1e2e; } /* bg-[#1e1e2e] */
+.p-6 { padding: 1.5rem; }
+.rounded-2xl { border-radius: 1rem; }
+.shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+.border-gray-700 { border: 1px solid #374151; }
+.mb-6 { margin-bottom: 1.5rem; }
+.text-center { text-align: center; }
+
+/* Header */
+.text-3xl { font-size: 1.875rem; }
+.font-bold { font-weight: 700; }
+.text-transparent { color: transparent; }
+.bg-clip-text { background-clip: text; }
+.bg-gradient { background-image: linear-gradient(to right, #c084fc, #ec4899); } /* from-purple-400 to-pink-500 */
+.mt-2 { margin-top: 0.5rem; }
+.text-gray-400 { color: #9ca3af; }
+
+/* Form Elements */
+.space-y-6 > * + * { margin-top: 1.5rem; }
+label.block { display: block; }
+.text-sm { font-size: 0.875rem; }
+.font-medium { font-weight: 500; }
+.text-gray-300 { color: #d1d5db; }
+.mb-2 { margin-bottom: 0.5rem; }
+
+textarea, input[type="text"] {
+    box-sizing: border-box; /* Ensures padding doesn't affect width */
+    width: 100%;
+    padding: 1rem; /* p-4 */
+    background-color: #181825; /* bg-[#181825] */
+    /* UPDATED: Darker default border */
+    border: 1px solid #374151; /* border-gray-700 */
+    border-radius: 0.5rem; /* rounded-lg */
+    color: #d1d5db; /* text-gray-300 */
+    transition: all 0.2s;
+}
+
+textarea:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: #c084fc; /* border-purple-400 */
+    /* UPDATED: Thinner, cleaner ring */
+    box-shadow: 0 0 0 1px #c084fc; /* ring-1 ring-purple-400 */
+}
+
+#transcript-status {
+    margin-top: 0.5rem; /* mt-2 */
+    font-size: 0.75rem; /* text-xs */
+    color: #6b7280; /* text-gray-500 */
+}
+/* Status colors (from popup.js) */
+#transcript-status.text-green-400 { color: #4ade80; }
+#transcript-status.text-yellow-400 { color: #facc15; }
+#transcript-status.text-red-400 { color: #f87171; }
+
+/* Button */
+#ask-button {
+    background-image: linear-gradient(to right, #a855f7, #ec4899); /* from-purple-500 to-pink-500 */
+    color: white;
+    font-weight: 700;
+    padding: 0.75rem 1.5rem; /* py-3 px-6 */
+    border: none;
+    border-radius: 0.5rem; /* rounded-lg */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-lg */
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+}
+#ask-button:hover {
+    background-image: linear-gradient(to right, #9333ea, #d946ef); /* hover:from-purple-600 hover:to-pink-600 */
+    transform: scale(1.05); /* hover:scale-105 */
+}
+
+/* Answer Area */
+.mt-6 { margin-top: 1.5rem; }
+.hidden { display: none; }
+.text-xl { font-size: 1.25rem; }
+.font-semibold { font-weight: 600; }
+.mb-3 { margin-bottom: 0.75rem; }
+
+/* Loader */
+#loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* NEW: Use gap for spacing */
+    gap: 0.75rem; /* replaces space-x-3 */
+}
+
+/* NEW: Single spinner element */
+.spinner {
+    width: 1.25rem; /* 20px */
+    height: 1.25rem; /* 20px */
+    border: 3px solid #45475a; /* dark-600 */
+    border-top-color: #c084fc; /* purple-400 */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Answer Text */
+#answer-text {
+    padding: 1rem; /* p-4 */
+    background-color: #181825; /* bg-[#181825] */
+    border: 1px solid #4b5563; /* border-gray-600 */
+    border-radius: 0.5rem; /* rounded-lg */
+    color: #d1d5db; /* text-gray-300 */
+    
+    /* NEW: Add a transition for the glow */
+    transition: all 0.3s ease-in-out;
+}
+
+/* NEW: Add a subtle glow when the answer appears */
+#answer-text:not(:empty) {
+    border-color: #45475a; /* dark-600 */
+    box-shadow: 0 0 15px rgba(192, 132, 252, 0.1); /* Faint purple glow */
+}
+
+#answer-text p {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+#answer-text .text-red-400 { color: #f87171; }

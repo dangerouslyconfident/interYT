@@ -1,0 +1,31 @@
+{
+    "manifest_version": 3,
+    "name": "YouTube Q&A",
+    "version": "1.1",
+    "description": "Ask questions about a YouTube video transcript.",
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "images/icon16.png",
+            "48": "images/icon48.png",
+            "128": "images/icon128.png"
+        }
+    },
+    "icons": {
+        "16": "images/icon16.png",
+        "48": "images/icon48.png",
+        "128": "images/icon128.png"
+    },
+    "host_permissions": [
+        "https://generativelanguage.googleapis.com/"
+    ],
+    "permissions": [
+        "tabs"
+    ],
+    "content_scripts": [
+        {
+            "matches": ["*://*.youtube.com/watch*"],
+            "js": ["content.js"]
+        }
+    ]
+}

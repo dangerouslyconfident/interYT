@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive YouTube Q&A</title>
+    <!--
+        REMOVED: Tailwind script (blocked by extension CSP)
+        REMOVED: Inline <style> block (blocked by extension CSP)
+    -->
+    
+    <!-- Load Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- ADDED: Link to the local CSS file -->
+    <link rel="stylesheet" href="popup.css">
+</head>
+<!-- NOTE: The classes are still here, but they are now
+     targeted by popup.css instead of Tailwind. -->
+<body class="bg-dark-body text-gray-200 p-4">
+
+    <div class="w-full max-w-4xl bg-dark-card p-6 rounded-2xl shadow-2xl border-gray-700">
+        
+        <header class="mb-6 text-center">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient text-glow">
+                YouTube Q&A
+            </h1>
+            <p class="mt-2 text-gray-400">
+                Ask a question about the video's transcript.
+            </p>
+        </header>
+
+        <div class="space-y-6">
+            
+            <!-- Step 1: Transcript Input -->
+            <div>
+                <label for="transcript" class="block text-sm font-medium text-gray-300 mb-2">
+                    Video Transcript
+                </label>
+                <textarea 
+                    id="transcript" 
+                    rows="8" 
+                    class="w-full p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300 focus-ring transition-all" 
+                    placeholder="Auto-fetching... (Ensure transcript is open on the page)"
+                ></textarea>
+                <p id="transcript-status" class="mt-2 text-xs text-gray-500">
+                    Click "..." then "Show transcript" on YouTube if this stays empty.
+                </p>
+            </div>
+
+            <!-- Step 2: Question Input -->
+            <div>
+                <label for="question" class="block text-sm font-medium text-gray-300 mb-2">
+                    Ask a Question
+                </label>
+                <input 
+                    type="text" 
+                    id="question" 
+                    class="w-full p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300 focus-ring transition-all" 
+                    placeholder="e.g., 'What was the main point?'"
+                >
+            </div>
+
+            <!-- Step 3: Ask Button -->
+            <button id="ask-button" class="w-full bg-gradient-button text-white font-bold py-3 px-6 rounded-lg shadow-lg transform-hover transition-all">
+                Get Answer
+            </button>
+
+            <!-- Step 4: Answer Display -->
+            <div id="answer-container" class="mt-6 hidden">
+                <h2 class="text-xl font-semibold text-gray-200 mb-3">Answer:</h2>
+                <!-- Loading Spinner -->
+                <div id="loader" class="flex items-center justify-center space-x-2 hidden">
+                    <div class="w-4 h-4 rounded-full animate-pulse bg-purple-400"></div>
+                    <div class="w-4 h-4 rounded-full animate-pulse bg-purple-400" style="animation-delay: 0.2s;"></div>
+                    <div class="w-4 h-4 rounded-full animate-pulse bg-purple-400" style="animation-delay: 0.4s;"></div>
+                    <span class="ml-3 text-gray-400">Thinking...</span>
+                </div>
+                <!-- Answer Text -->
+                <div id="answer-text" class="p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300 prose">
+                    <!-- AI's answer will appear here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
