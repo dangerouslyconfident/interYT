@@ -1,123 +1,262 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Q&A</title>
-    
-    <!-- Load Inter font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="popup.css">
-</head>
-<body class="bg-dark-body text-gray-200">
+document.addEventListener('DOMContentLoaded', () => {
+    const qaTabButton = document.getElementById('tab-qa');
+    const commentsTabButton = document.getElementById('tab-comments');
+    const qaTabContent = document.getElementById('qa-tab-content');
+    const commentsTabContent = document.getElementById('comments-tab-content');
 
-    <div class="w-full max-w-4xl bg-dark-card rounded-2xl shadow-2xl">
+    const askButton = document.getElementById('ask-button');
+    const transcriptInput = document.getElementById('transcript');
+    const questionInput = document.getElementById('question');
+    const answerContainer = document.getElementById('answer-container');
+    const answerText = document.getElementById('answer-text');
+    const loader = document.getElementById('loader');
+    const transcriptStatus = document.getElementById('transcript-status');
+
+    const fetchCommentsButton = document.getElementById('fetch-comments-button');
+    const commentsContainer = document.getElementById('comments-container');
+    const commentsLoader = document.getElementById('comments-loader');
+    const commentsList = document.getElementById('comments-list');
+    const commentsStatus = document.getElementById('comments-status');
+
+    if (qaTabButton) qaTabButton.addEventListener('click', () => switchTab('qa'));
+    if (commentsTabButton) commentsTabButton.addEventListener('click', () => switchTab('comments'));
+    if (askButton) askButton.addEventListener('click', handleAskQuestion);
+    if (fetchCommentsButton) fetchCommentsButton.addEventListener('click', handleFetchComments);
+
+    autoFetchTranscript();
+
+    function switchTab(tab) {
+        if (tab === 'qa') {
+            qaTabButton.classList.add('active');
+            commentsTabButton.classList.remove('active');
+            qaTabContent.classList.remove('hidden');
+            commentsTabContent.classList.add('hidden');
+        } else if (tab === 'comments') {
+            qaTabButton.classList.remove('active');
+            commentsTabButton.classList.add('active');
+            qaTabContent.classList.add('hidden');
+            commentsTabContent.classList.remove('hidden');
+        }
+    }
+
+    function autoFetchTranscript() {
+        transcriptStatus.textContent = "Attempting to fetch transcript...";
+        transcriptStatus.classList.remove("text-green-400", "text-yellow-400", "text-red-400");
+        transcriptStatus.classList.add("text-gray-500");
+
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs && tabs[0]) {
+                const activeTab = tabs[0];
+                if (activeTab.url && (activeTab.url.includes("youtube.com/watch") || activeTab.url.includes("youtube.com/shorts") || activeTab.url.includes("youtube.com/live"))) {
+                    chrome.tabs.sendMessage(activeTab.id, { type: "FETCH_TRANSCRIPT" }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            const errorMsg = chrome.runtime.lastError.message || "Unknown connection error.";
+                            transcriptInput.placeholder = "Couldn't connect to page. Reload page & try again.";
+                            transcriptStatus.textContent = `Error: ${errorMsg}. Please reload the YouTube page.`;
+                            transcriptStatus.classList.add("text-red-400");
+                        } else if (response && response.transcript) {
+                            transcriptInput.value = response.transcript;
+                            transcriptStatus.textContent = `Successfully fetched ${response.transcript.split(' ').length} words.`;
+                            transcriptStatus.classList.add("text-green-400");
+                        } else {
+                            transcriptInput.placeholder = "No transcript found. Please open it on the page.";
+                            transcriptStatus.textContent = response.error || "Could not find an open transcript on the page.";
+                            transcriptStatus.classList.add("text-yellow-400");
+                        }
+                    });
+                } else {
+                    transcriptInput.placeholder = "Not a YouTube video page.";
+                    transcriptStatus.textContent = "Please navigate to a YouTube video to use this.";
+                    transcriptStatus.classList.add("text-yellow-400");
+                }
+            } else {
+                transcriptStatus.textContent = "Could not find an active tab.";
+                transcriptStatus.classList.add("text-red-400");
+            }
+        });
+    }
+
+    async function handleAskQuestion() {
+        if (!transcriptInput || !questionInput) return;
+        const transcript = transcriptInput.value;
+        const question = questionInput.value;
+
+        if (!transcript.trim()) {
+            showMessage("Please fetch or paste a transcript first.", "error");
+            return;
+        }
+        if (!question.trim()) {
+            showMessage("Please enter a question.", "error");
+            return;
+        }
+
+        answerContainer.classList.remove('hidden');
+        answerText.classList.add('hidden');
+        loader.classList.remove('hidden');
+        answerText.innerHTML = "";
+
+        try {
+            const aiResponse = await callGeminiApi(transcript, question);
+            showMessage(aiResponse, "success");
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, "error");
+        } finally {
+            loader.classList.add('hidden');
+            answerText.classList.remove('hidden');
+        }
+    }
+
+    async function callGeminiApi(transcript, question) {
+        const systemPrompt = `You are an expert Q&A assistant. You will be given a Video Transcript and a User Question.
+
+Your first task is to silently evaluate the User Question and place it into one of three categories:
+1.  Directly Related
+2.  Contextually Related
+3.  Unrelated
+
+If 1 or 2: answer thoroughly using transcript and knowledge.
+If 3: respond only with "(This question seems unrelated to the video. Please ask a question about the video's content or topic.)"`;
+
+        const userQuery = `
+Here is the transcript:
+---
+${transcript}
+---
+
+Here is my question:
+${question}
+`;
+
+        const apiKey = "AIzaSyDRjeRt5gKiNWzj9Ump7RXapwkAGm0mQgw";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        const payload = {
+            contents: [{ parts: [{ text: userQuery }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            tools: [{ google_search: {} }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
+        };
+
+        const response = await fetchWithBackoff(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
+        }
+
+        const result = await response.json();
+        let sources = [];
+        const candidate = result.candidates?.[0];
+        const groundingMetadata = candidate?.groundingMetadata;
+
+        if (groundingMetadata?.groundingAttributions) {
+            sources = groundingMetadata.groundingAttributions
+                .map(a => ({ uri: a.web?.uri, title: a.web?.title }))
+                .filter(s => s.uri && s.title);
+        }
+
+        if (candidate?.content?.parts?.[0]?.text) {
+            let answerText = candidate.content.parts[0].text;
+            if (sources.length > 0) {
+                answerText += "\n\n**Sources:**\n";
+                sources.forEach((s, i) => {
+                    answerText += `${i + 1}. [${s.title}](${s.uri})\n`;
+                });
+            }
+            return answerText;
+        } else {
+            return "Could not find a valid answer in the API response.";
+        }
+    }
+
+    function showMessage(message, type = "success") {
+        let formatted = message;
+        if (type === "success") {
+            formatted = formatted
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-cyan-400 hover:underline">$1</a>')
+                .replace(/\n/g, "<br>")
+                .replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+            answerText.innerHTML = formatted;
+        } else {
+            formatted = formatted
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\n/g, "<br>");
+            answerText.innerHTML = `<p class="text-red-400">${formatted}</p>`;
+        }
+    }
+
+    function handleFetchComments() {
+        commentsContainer.classList.remove('hidden');
+        commentsLoader.classList.remove('hidden');
+        commentsList.classList.add('hidden');
+        commentsList.innerHTML = "";
+        commentsStatus.textContent = "Attempting to fetch comments...";
+        commentsStatus.classList.remove('text-red-400');
         
-        <!-- Tab Navigation -->
-        <nav class="tab-nav">
-            <button id="tab-qa" class="tab-item active">Q&A</button>
-            <button id="tab-comments" class="tab-item">Comments</button>
-        </nav>
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs && tabs[0]) {
+                const activeTab = tabs[0];
+                chrome.tabs.sendMessage(activeTab.id, { type: "FETCH_COMMENTS" }, (response) => {
+                    commentsLoader.classList.add('hidden');
+                    commentsList.classList.remove('hidden');
 
-        <!-- Q&A Tab Content (Initially visible) -->
-        <div id="qa-tab-content" class="p-6">
-            <header class="mb-6 text-center">
-                <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient text-glow">
-                    YouTube Q&A
-                </h1>
-                <p class="mt-2 text-gray-400">
-                    Ask a question about the video's transcript.
-                </p>
-            </header>
+                    if (chrome.runtime.lastError) {
+                        const errorMsg = chrome.runtime.lastError.message || "Unknown connection error.";
+                        commentsStatus.textContent = `Error: ${errorMsg}. Please reload the YouTube page.`;
+                        commentsStatus.classList.add("text-red-400");
+                    } else if (response && response.comments) {
+                        if (response.comments.length === 0) {
+                            commentsStatus.textContent = "Could not find any comments.";
+                            commentsStatus.classList.add('text-red-400');
+                            return;
+                        }
+                        commentsStatus.textContent = `Successfully fetched ${response.comments.length} comments.`;
+                        commentsStatus.classList.remove('text-red-400');
+                        response.comments.forEach(comment => {
+                            const commentEl = document.createElement('div');
+                            commentEl.className = 'comment-item';
+                            const authorEl = document.createElement('div');
+                            authorEl.className = 'comment-author';
+                            authorEl.textContent = comment.author;
+                            const textEl = document.createElement('div');
+                            textEl.className = 'comment-text';
+                            textEl.textContent = comment.text;
+                            commentEl.appendChild(authorEl);
+                            commentEl.appendChild(textEl);
+                            commentsList.appendChild(commentEl);
+                        });
+                    } else {
+                        commentsStatus.textContent = response.error || "Could not find any comments.";
+                        commentsStatus.classList.add("text-red-400");
+                    }
+                });
+            } else {
+                commentsLoader.classList.add('hidden');
+                commentsStatus.textContent = "Could not find an active tab.";
+                commentsStatus.classList.add("text-red-400");
+            }
+        });
+    }
 
-            <div class="space-y-6">
-                <!-- Transcript Input -->
-                <div>
-                    <label for="transcript" class="block text-sm font-medium text-gray-300 mb-2">
-                        Video Transcript
-                    </label>
-                    <textarea 
-                        id="transcript" 
-                        rows="8" 
-                        class="w-full p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300 focus-ring transition-all" 
-                        placeholder="Auto-fetching... (Ensure transcript is open on the page)"
-                    ></textarea>
-                    <p id="transcript-status" class="mt-2 text-xs text-gray-500">
-                        Click "..." then "Show transcript" on YouTube if this stays empty.
-                    </p>
-                </div>
-
-                <!-- Question Input -->
-                <div>
-                    <label for="question" class="block text-sm font-medium text-gray-300 mb-2">
-                        Ask a Question
-                    </label>
-                    <input 
-                        type="text" 
-                        id="question" 
-                        class="w-full p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300 focus-ring transition-all" 
-                        placeholder="e.g., 'What was the main point?'"
-                    >
-                </div>
-
-                <!-- Ask Button -->
-                <button id="ask-button" class="w-full bg-gradient-button text-white font-bold py-3 px-6 rounded-lg shadow-lg transform-hover transition-all">
-                    Get Answer
-                </button>
-
-                <!-- Answer Display -->
-                <div id="answer-container" class="mt-6 hidden">
-                    <h2 class="text-xl font-semibold text-gray-200 mb-3">Answer:</h2>
-                    <div id="loader" class="flex items-center justify-center space-x-3 hidden">
-                        <div class="spinner"></div>
-                        <span class="text-gray-400">Thinking...</span>
-                    </div>
-                    <div id="answer-text" class="p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300 prose">
-                        <!-- AI's answer will appear here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Comments Tab Content (Initially hidden) -->
-        <div id="comments-tab-content" class="p-6 hidden">
-             <header class="mb-6 text-center">
-                <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient text-glow">
-                    Video Comments
-                </h1>
-                <p class="mt-2 text-gray-400">
-                    Fetch and view the top comments from the video.
-                </p>
-            </header>
-
-            <div class="space-y-6">
-                <button id="fetch-comments-button" class="w-full bg-gradient-button text-white font-bold py-3 px-6 rounded-lg shadow-lg transform-hover transition-all">
-                    Fetch Comments
-                </button>
-
-                <!-- Comments Display -->
-                <div id="comments-container" class="mt-6 hidden">
-                    <h2 class="text-xl font-semibold text-gray-200 mb-3">Top Comments:</h2>
-                    
-                    <div id="comments-loader" class="flex items-center justify-center space-x-3 hidden">
-                        <div class="spinner"></div>
-                        <span class="text-gray-400">Fetching comments...</span>
-                    </div>
-                    
-                    <p id="comments-status" class="mt-2 text-xs text-gray-500 text-center"></p>
-
-                    <div id="comments-list" class="space-y-4 max-h-96 overflow-y-auto">
-                        <!-- Scraped comments will be injected here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <script src="popup.js"></script>
-</body>
-</html>
+    async function fetchWithBackoff(url, options, maxRetries = 5) {
+        let delay = 1000;
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok && (response.status === 429 || response.status >= 500)) {
+                    throw new Error(`Retryable error: ${response.status}`);
+                }
+                return response;
+            } catch (error) {
+                if (i === maxRetries - 1) throw error;
+                await new Promise(r => setTimeout(r, delay * (2 ** i)));
+            }
+        }
+    }
+});
