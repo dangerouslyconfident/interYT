@@ -1,4 +1,4 @@
-# YouTube Q&A (Gemini Extension)
+# interYT
 
 A browser extension that uses the Google Gemini API to answer questions about any YouTube video.
 
