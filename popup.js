@@ -188,7 +188,7 @@ ${transcript}
 Here is my question:
 ${question}
 `;
-        const apiKey = "AIzaSyDRjeRt5gKiNWzj9Ump7RXapwkAGm0mQgw";
+        const apiKey = "YOUR-API-KEY";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
         const payload = {
@@ -353,7 +353,7 @@ ${commentsString}
 Please provide a brief summary of the viewer opinion:
 `;
 
-        const apiKey = "AIzaSyDRjeRt5gKiNWzj9Ump7RXapwkAGm0mQgw";
+        const apiKey = "YOUR-API-KEY";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
         const payload = {
