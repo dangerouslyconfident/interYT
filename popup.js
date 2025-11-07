@@ -1,5 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // --- Tab Elements ---
+    const qaTabButton = document.getElementById('tab-qa');
+    const commentsTabButton = document.getElementById('tab-comments');
+    const qaTabContent = document.getElementById('qa-tab-content');
+    const commentsTabContent = document.getElementById('comments-tab-content');
+
+    // --- Q&A Tab Elements ---
     const askButton = document.getElementById('ask-button');
     const transcriptInput = document.getElementById('transcript');
     const questionInput = document.getElementById('question');
@@ -8,13 +15,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const loader = document.getElementById('loader');
     const transcriptStatus = document.getElementById('transcript-status');
 
+    // --- Comments Tab Elements ---
+    const fetchCommentsButton = document.getElementById('fetch-comments-button');
+    const commentsContainer = document.getElementById('comments-container');
+    const commentsLoader = document.getElementById('comments-loader');
+    const commentsList = document.getElementById('comments-list');
+    const commentsStatus = document.getElementById('comments-status');
+
+    // --- Event Listeners ---
+    if (qaTabButton) {
+        qaTabButton.addEventListener('click', () => switchTab('qa'));
+    }
+    if (commentsTabButton) {
+        commentsTabButton.addEventListener('click', () => switchTab('comments'));
+    }
     if (askButton) {
         askButton.addEventListener('click', handleAskQuestion);
     }
+    if (fetchCommentsButton) {
+        fetchCommentsButton.addEventListener('click', handleFetchComments);
+    }
 
-    autoFetchTranscript();
+    // --- Initial Load ---
+    autoFetchTranscript(); // Fetch transcript on load for the Q&A tab
 
+    // --- Tab Switching Logic ---
+    function switchTab(tab) {
+        if (tab === 'qa') {
+            qaTabButton.classList.add('active');
+            commentsTabButton.classList.remove('active');
+            qaTabContent.classList.remove('hidden');
+            commentsTabContent.classList.add('hidden');
+        } else if (tab === 'comments') {
+            qaTabButton.classList.remove('active');
+            commentsTabButton.classList.add('active');
+            qaTabContent.classList.add('hidden');
+            commentsTabContent.classList.remove('hidden');
+        }
+    }
+
+    // --- Q&A Tab Functions ---
     function autoFetchTranscript() {
+        // (Function is identical to the previous version)
         transcriptStatus.textContent = "Attempting to fetch transcript...";
         transcriptStatus.classList.remove("text-green-400", "text-yellow-400", "text-red-400");
         transcriptStatus.classList.add("text-gray-500");
@@ -30,29 +72,24 @@ document.addEventListener('DOMContentLoaded', () => {
                             console.warn("Error sending message:", errorMsg);
                             transcriptInput.placeholder = "Couldn't connect to page. Reload page & try again.";
                             transcriptStatus.textContent = `Error: ${errorMsg}. Please reload the YouTube page.`;
-                            transcriptStatus.classList.remove("text-gray-500");
                             transcriptStatus.classList.add("text-red-400");
                         } else if (response && response.transcript) {
                             transcriptInput.value = response.transcript;
                             transcriptStatus.textContent = `Successfully fetched ${response.transcript.split(' ').length} words.`;
-                            transcriptStatus.classList.remove("text-gray-500");
                             transcriptStatus.classList.add("text-green-400");
                         } else {
                             transcriptInput.placeholder = "No transcript found. Please open it on the page.";
                             transcriptStatus.textContent = response.error || "Could not find an open transcript on the page.";
-                            transcriptStatus.classList.remove("text-gray-500");
                             transcriptStatus.classList.add("text-yellow-400");
                         }
                     });
                 } else {
                     transcriptInput.placeholder = "Not a YouTube video page.";
                     transcriptStatus.textContent = "Please navigate to a YouTube video to use this.";
-                    transcriptStatus.classList.remove("text-gray-500");
                     transcriptStatus.classList.add("text-yellow-400");
                 }
             } else {
                 transcriptStatus.textContent = "Could not find an active tab.";
-                transcriptStatus.classList.remove("text-gray-500");
                 transcriptStatus.classList.add("text-red-400");
             }
         });
@@ -127,6 +164,9 @@ ${question}
         
         const apiKey = "AIzaSyDRjeRt5gKiNWzj9Ump7RXapwkAGm0mQgw"; 
         
+        // if (apiKey === "PASTE_YOUR_NEW_KEY_HERE" || apiKey === "") {
+        //     throw new Error("API key is missing. Please add it to popup.js");
+        // }
         
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
@@ -188,7 +228,7 @@ ${question}
         let formattedMessage = message;
 
         if (type === "success") {
-            formattedMessage = formattedMessage.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-purple-400 hover:underline">$1</a>');
+            formattedMessage = formattedMessage.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-cyan-400 hover:underline">$1</a>');
             formattedMessage = formattedMessage.replace(/\n/g, "<br>");
             formattedMessage = formattedMessage.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
             
@@ -202,7 +242,69 @@ ${question}
             answerText.innerHTML = `<p class="text-red-400">${formattedMessage}</p>`;
         }
     }
+    
+    // --- Comments Tab Functions ---
+    function handleFetchComments() {
+        commentsContainer.classList.remove('hidden');
+        commentsLoader.classList.remove('hidden');
+        commentsList.classList.add('hidden');
+        commentsList.innerHTML = "";
+        commentsStatus.textContent = "Attempting to fetch comments...";
+        commentsStatus.classList.remove('text-red-400');
+        
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+             if (tabs && tabs[0]) {
+                const activeTab = tabs[0];
+                chrome.tabs.sendMessage(activeTab.id, { type: "FETCH_COMMENTS" }, (response) => {
+                    commentsLoader.classList.add('hidden');
+                    commentsList.classList.remove('hidden');
 
+                    if (chrome.runtime.lastError) {
+                        const errorMsg = chrome.runtime.lastError.message || "Unknown connection error.";
+                        console.warn("Error sending message:", errorMsg);
+                        commentsStatus.textContent = `Error: ${errorMsg}. Please reload the YouTube page.`;
+                        commentsStatus.classList.add("text-red-400");
+                    } else if (response && response.comments) {
+                        if (response.comments.length === 0) {
+                            commentsStatus.textContent = "Could not find any comments. (Is the comment section loaded on the page?)";
+                            commentsStatus.classList.add('text-red-400');
+                            return;
+                        }
+                        
+                        commentsStatus.textContent = `Successfully fetched ${response.comments.length} comments.`;
+                        commentsStatus.classList.remove('text-red-400');
+                        
+                        response.comments.forEach(comment => {
+                            const commentEl = document.createElement('div');
+                            commentEl.className = 'comment-item';
+                            
+                            const authorEl = document.createElement('div');
+                            authorEl.className = 'comment-author';
+                            authorEl.textContent = comment.author;
+                            
+                            const textEl = document.createElement('div');
+                            textEl.className = 'comment-text';
+                            textEl.textContent = comment.text;
+                            
+                            commentEl.appendChild(authorEl);
+                            commentEl.appendChild(textEl);
+                            commentsList.appendChild(commentEl);
+                        });
+                        
+                    } else {
+                        commentsStatus.textContent = response.error || "Could not find any comments.";
+                        commentsStatus.classList.add("text-red-400");
+                    }
+                });
+             } else {
+                commentsLoader.classList.add('hidden');
+                commentsStatus.textContent = "Could not find an active tab.";
+                commentsStatus.classList.add("text-red-400");
+             }
+        });
+    }
+
+    // --- Utility Functions ---
     async function fetchWithBackoff(url, options, maxRetries = 5) {
         let delay = 1000;
         for (let i = 0; i < maxRetries; i++) {
