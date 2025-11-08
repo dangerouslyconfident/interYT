@@ -475,6 +475,9 @@ ${question}
                             return;
                         }
                         
+                        // Store comments for export
+                        currentComments = response.comments;
+                        
                         commentsStatus.textContent = `Successfully fetched ${response.comments.length} comments.`;
                         commentsStatus.classList.remove('text-red-400');
                         
@@ -1170,10 +1173,14 @@ IMPORTANT:
         });
     }
 
+    // Store comments data globally
+    let currentComments = [];
+
     function generateTXT() {
         const includeQA = document.getElementById('export-qa').checked;
         const includeSummary = document.getElementById('export-summary').checked;
         const includeComments = document.getElementById('export-comments').checked;
+        const includeFullComments = document.getElementById('export-full-comments').checked;
 
         let textContent = '';
 
@@ -1213,6 +1220,19 @@ IMPORTANT:
             textContent += 'Comment Summary\n';
             textContent += '-'.repeat(60) + '\n\n';
             textContent += `${stripHtml(commentSummary)}\n\n`;
+        }
+
+        // Full Comments
+        if (includeFullComments && currentComments && currentComments.length > 0) {
+            textContent += '-'.repeat(60) + '\n';
+            textContent += `Full Comments (${currentComments.length})\n`;
+            textContent += '-'.repeat(60) + '\n\n';
+            
+            currentComments.forEach((comment, index) => {
+                textContent += `[${index + 1}] ${comment.author}:\n`;
+                textContent += `${comment.text}\n\n`;
+            });
+            textContent += '\n';
         }
 
         // Create and download the text file
