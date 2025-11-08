@@ -922,7 +922,7 @@ IMPORTANT:
 - Separate title, description, and URL with " - "
 - Make sure URLs are complete and clickable`;
 
-        const userQuery = `Suggest related videos for:\n\n${transcript.substring(0, 1000)}...`;
+        const userQuery = `Suggest related videos for:\n\n${transcript.substring(0, 10000)}...`;
         
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
@@ -1370,3 +1370,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
