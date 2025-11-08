@@ -58,21 +58,7 @@ const apiKey = "A1zaS...YOUR_LONG_API_KEY_...s7B4";
 
 Save the popup.js file.
 
-## 4. Create Icon Placeholders (Optional)
-
-The extension manifest (manifest.json) points to icon files that are not in this repo. To avoid a broken icon, you should:
-
-Inside the main folder, create a new folder named images.
-
-Create and save three simple PNG icons (even just colored squares) in this folder:
-
-images/icon16.png (16x16)
-
-images/icon48.png (48x48)
-
-images/icon128.png (128x128)
-
-## 5. Load the Extension in Your Browser
+## 4. Load the Extension in Your Browser
 
 Open Chrome, Edge, or any Chromium-based browser.
 
