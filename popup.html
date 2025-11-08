@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Q&A</title>
     
-    <!-- Load Inter font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,25 +15,22 @@
 
     <div class="w-full max-w-4xl bg-dark-card rounded-2xl shadow-2xl">
         
-        <!-- Tab Navigation -->
         <nav class="tab-nav">
             <button id="tab-qa" class="tab-item active">Q&A</button>
             <button id="tab-comments" class="tab-item">Comments</button>
         </nav>
 
-        <!-- Q&A Tab Content (Initially visible) -->
         <div id="qa-tab-content" class="p-6">
             <header class="mb-6 text-center">
                 <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient text-glow">
-                    interYT
+                    YouTube Q&A
                 </h1>
                 <p class="mt-2 text-gray-400">
-                    Ask a question about the video.
+                    Ask a question about the video's transcript.
                 </p>
             </header>
 
             <div class="space-y-6">
-                <!-- Transcript Input -->
                 <div>
                     <label for="transcript" class="block text-sm font-medium text-gray-300 mb-2">
                         Video Transcript
@@ -50,7 +46,6 @@
                     </p>
                 </div>
 
-                <!-- Question Input -->
                 <div>
                     <label for="question" class="block text-sm font-medium text-gray-300 mb-2">
                         Ask a Question
@@ -63,12 +58,10 @@
                     >
                 </div>
 
-                <!-- Ask Button -->
                 <button id="ask-button" class="w-full bg-gradient-button text-white font-bold py-3 px-6 rounded-lg shadow-lg transform-hover transition-all">
                     Get Answer
                 </button>
 
-                <!-- Answer Display -->
                 <div id="answer-container" class="mt-6 hidden">
                     <h2 class="text-xl font-semibold text-gray-200 mb-3">Answer:</h2>
                     <div id="loader" class="flex items-center justify-center space-x-3 hidden">
@@ -76,22 +69,21 @@
                         <span class="text-gray-400">Thinking...</span>
                     </div>
                     <div id="answer-text" class="p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300 prose">
-                        <!-- AI's answer will appear here -->
                     </div>
                 </div>
                 
-                <!-- NEW: Q&A History -->
                 <div id="history-container" class="mt-8 hidden">
-                    <h3 class="text-lg font-semibold text-gray-300 mb-3">Recent Questions</h3>
+                    <div class="history-header">
+                        <h3 class="text-lg font-semibold text-gray-300">Recent Questions</h3>
+                        <button id="clear-history-button">Clear History</button>
+                    </div>
                     <div id="history-list" class="space-y-4 max-h-48 overflow-y-auto">
-                        <!-- History items will be injected here -->
                     </div>
                 </div>
 
             </div>
         </div>
         
-        <!-- Comments Tab Content (Initially hidden) -->
         <div id="comments-tab-content" class="p-6 hidden">
              <header class="mb-6 text-center">
                 <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient text-glow">
@@ -107,10 +99,8 @@
                     Fetch Comments
                 </button>
 
-                <!-- Comments Display -->
                 <div id="comments-container" class="mt-6 hidden">
                     
-                    <!-- NEW: Comment Summary -->
                     <div id="comment-summary-container" class="mb-6 hidden">
                         <h2 class="text-xl font-semibold text-gray-200 mb-3">Viewer Opinion Summary:</h2>
                         <div id="comment-summary-loader" class="flex items-center justify-center space-x-3 hidden">
@@ -118,11 +108,9 @@
                             <span class="text-gray-400">Summarizing...</span>
                         </div>
                         <div id="comment-summary-text" class="p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300 prose">
-                            <!-- AI comment summary will appear here -->
                         </div>
                     </div>
 
-                    <!-- Existing Comments List -->
                     <h2 class="text-xl font-semibold text-gray-200 mb-3">Top Comments:</h2>
                     <div id="comments-loader" class="flex items-center justify-center space-x-3 hidden">
                         <div class="spinner"></div>
@@ -130,7 +118,6 @@
                     </div>
                     <p id="comments-status" class="mt-2 text-xs text-gray-500 text-center"></p>
                     <div id="comments-list" class="space-y-4 max-h-96 overflow-y-auto">
-                        <!-- Scraped comments will be injected here -->
                     </div>
                 </div>
             </div>

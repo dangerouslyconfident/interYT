@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const transcriptStatus = document.getElementById('transcript-status');
     const historyContainer = document.getElementById('history-container');
     const historyList = document.getElementById('history-list');
+    const clearHistoryButton = document.getElementById('clear-history-button');
 
     const fetchCommentsButton = document.getElementById('fetch-comments-button');
     const commentsContainer = document.getElementById('comments-container');
@@ -37,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (fetchCommentsButton) {
         fetchCommentsButton.addEventListener('click', handleFetchComments);
+    }
+    if (clearHistoryButton) {
+        clearHistoryButton.addEventListener('click', handleClearHistory);
     }
 
     autoFetchTranscript();
@@ -85,6 +89,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         chrome.storage.local.set({ qaHistory: qaHistory });
         renderHistory();
+    }
+
+    function handleClearHistory() {
+        qaHistory = [];
+        chrome.storage.local.remove('qaHistory', () => {
+            renderHistory();
+        });
     }
 
     function switchTab(tab) {
@@ -209,8 +220,8 @@ Here is my question:
 ${question}
 `;
         
-        const apiKey = "AIzaSyCDhG0gtXooTaIT33Ptfjrexjsnxtdwi3A"; 
-
+        const apiKey = "PASTE_YOUR_NEW_KEY_HERE"; 
+    
         
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
@@ -381,8 +392,8 @@ ${commentsString}
 Please provide a brief summary of the viewer opinion:
 `;
 
-        const apiKey = "AIzaSyCDhG0gtXooTaIT33Ptfjrexjsnxtdwi3A"; 
-        
+        const apiKey = "PASTE_YOUR_NEW_KEY_HERE"; 
+
         
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 

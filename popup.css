@@ -186,6 +186,20 @@ textarea:focus, input[type="text"]:focus {
     white-space: pre-wrap;
     word-break: break-word;
 }
+#clear-history-button {
+    background: none;
+    border: none;
+    color: #F87171;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+#clear-history-button:hover {
+    background-color: rgba(248, 113, 113, 0.1);
+}
 .history-answer a { color: #22D3EE; }
 .history-answer strong { color: #f0f0f0; }
 
