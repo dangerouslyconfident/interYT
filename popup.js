@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+
     let qaHistory = [];
 
     const qaTabButton = document.getElementById('tab-qa');
@@ -25,10 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const commentSummaryLoader = document.getElementById('comment-summary-loader');
     const commentSummaryText = document.getElementById('comment-summary-text');
 
-    if (qaTabButton) qaTabButton.addEventListener('click', () => switchTab('qa'));
-    if (commentsTabButton) commentsTabButton.addEventListener('click', () => switchTab('comments'));
-    if (askButton) askButton.addEventListener('click', handleAskQuestion);
-    if (fetchCommentsButton) fetchCommentsButton.addEventListener('click', handleFetchComments);
+    if (qaTabButton) {
+        qaTabButton.addEventListener('click', () => switchTab('qa'));
+    }
+    if (commentsTabButton) {
+        commentsTabButton.addEventListener('click', () => switchTab('comments'));
+    }
+    if (askButton) {
+        askButton.addEventListener('click', handleAskQuestion);
+    }
+    if (fetchCommentsButton) {
+        fetchCommentsButton.addEventListener('click', handleFetchComments);
+    }
 
     autoFetchTranscript();
     loadHistory();
@@ -44,18 +53,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderHistory() {
         if (!historyList) return;
-        historyList.innerHTML = "";
+        historyList.innerHTML = ""; 
+
         if (qaHistory.length > 0) {
             historyContainer.classList.remove('hidden');
             qaHistory.forEach(item => {
                 const historyItem = document.createElement('div');
                 historyItem.className = 'history-item';
+
                 const questionEl = document.createElement('div');
                 questionEl.className = 'history-question';
                 questionEl.textContent = item.question;
+
                 const answerEl = document.createElement('div');
                 answerEl.className = 'history-answer';
-                answerEl.innerHTML = formatAnswerForDisplay(item.answer);
+                answerEl.innerHTML = formatAnswerForDisplay(item.answer); 
+
                 historyItem.appendChild(questionEl);
                 historyItem.appendChild(answerEl);
                 historyList.appendChild(historyItem);
@@ -66,8 +79,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveToHistory(question, answer) {
-        qaHistory.unshift({ question, answer });
-        if (qaHistory.length > 5) qaHistory.pop();
+        qaHistory.unshift({ question, answer }); 
+        if (qaHistory.length > 5) {
+            qaHistory.pop(); 
+        }
         chrome.storage.local.set({ qaHistory: qaHistory });
         renderHistory();
     }
@@ -94,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs && tabs[0]) {
                 const activeTab = tabs[0];
+                
                 if (activeTab.url && (activeTab.url.includes("youtube.com/watch") || activeTab.url.includes("youtube.com/shorts") || activeTab.url.includes("youtube.com/live"))) {
                     chrome.tabs.sendMessage(activeTab.id, { type: "FETCH_TRANSCRIPT" }, (response) => {
                         if (chrome.runtime.lastError) {
@@ -143,17 +159,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         answerContainer.classList.remove('hidden');
-        answerText.classList.add('hidden');
-        loader.classList.remove('hidden');
-        answerText.innerHTML = "";
+        answerText.classList.add('hidden'); 
+        loader.classList.remove('hidden'); 
+        answerText.innerHTML = ""; 
 
         try {
             const aiResponse = await callGeminiApi(transcript, question);
+            
             showMessage(aiResponse, "success");
-            saveToHistory(question, aiResponse);
+            saveToHistory(question, aiResponse); 
+
         } catch (error) {
             console.error("Error calling Gemini API:", error);
             showMessage(`Error: ${error.message}`, "error");
+            
         } finally {
             loader.classList.add('hidden');
             answerText.classList.remove('hidden');
@@ -161,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function callGeminiApi(transcript, question) {
+        
         const systemPrompt = `You are an expert Q&A assistant. You will be given a Video Transcript and a User Question.
 
 Your first task is to silently evaluate the User Question and place it into one of three categories:
@@ -178,7 +198,7 @@ Your actions will be based on this evaluation:
 * **If the question is in Category 3 (Unrelated):**
     * You MUST NOT answer the question.
     * You MUST respond *only* with this exact message: \`(This question seems unrelated to the video. Please ask a question about the video's content or topic.)\``;
-
+        
         const userQuery = `
 Here is the transcript:
 ---
@@ -188,7 +208,10 @@ ${transcript}
 Here is my question:
 ${question}
 `;
-        const apiKey = "YOUR-API-KEY";
+        
+        const apiKey = "AIzaSyCDhG0gtXooTaIT33Ptfjrexjsnxtdwi3A"; 
+
+        
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
         const payload = {
@@ -196,9 +219,9 @@ ${question}
             systemInstruction: {
                 parts: [{ text: systemPrompt }]
             },
-            tools: [{ "google_search": {} }],
+            tools: [{ "google_search": {} }], 
             generationConfig: {
-                temperature: 0.2,
+                temperature: 0.2, 
                 maxOutputTokens: 1024,
             }
         };
@@ -215,7 +238,7 @@ ${question}
         }
 
         const result = await response.json();
-
+        
         let sources = [];
         const candidate = result.candidates?.[0];
         const groundingMetadata = candidate?.groundingMetadata;
@@ -226,11 +249,12 @@ ${question}
                     uri: attribution.web?.uri,
                     title: attribution.web?.title,
                 }))
-                .filter(source => source.uri && source.title);
+                .filter(source => source.uri && source.title); 
         }
 
         if (candidate && candidate.content?.parts?.[0]?.text) {
             let answerText = candidate.content.parts[0].text;
+            
             if (sources.length > 0) {
                 answerText += "\n\n**Sources:**\n";
                 sources.forEach((source, index) => {
@@ -266,7 +290,7 @@ ${question}
             answerText.innerHTML = `<p class="text-red-400">${formattedMessage}</p>`;
         }
     }
-
+    
     function handleFetchComments() {
         commentsContainer.classList.remove('hidden');
         commentsLoader.classList.remove('hidden');
@@ -274,12 +298,12 @@ ${question}
         commentsList.innerHTML = "";
         commentsStatus.textContent = "Attempting to fetch comments...";
         commentsStatus.classList.remove('text-red-400');
-
+        
         commentSummaryContainer.classList.add('hidden');
         commentSummaryText.innerHTML = "";
-
+        
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs && tabs[0]) {
+             if (tabs && tabs[0]) {
                 const activeTab = tabs[0];
                 chrome.tabs.sendMessage(activeTab.id, { type: "FETCH_COMMENTS" }, (response) => {
                     commentsLoader.classList.add('hidden');
@@ -296,35 +320,39 @@ ${question}
                             commentsStatus.classList.add('text-red-400');
                             return;
                         }
-
+                        
                         commentsStatus.textContent = `Successfully fetched ${response.comments.length} comments.`;
                         commentsStatus.classList.remove('text-red-400');
-
+                        
                         response.comments.forEach(comment => {
                             const commentEl = document.createElement('div');
                             commentEl.className = 'comment-item';
+                            
                             const authorEl = document.createElement('div');
                             authorEl.className = 'comment-author';
                             authorEl.textContent = comment.author;
+                            
                             const textEl = document.createElement('div');
                             textEl.className = 'comment-text';
                             textEl.textContent = comment.text;
+                            
                             commentEl.appendChild(authorEl);
                             commentEl.appendChild(textEl);
                             commentsList.appendChild(commentEl);
                         });
 
                         callGeminiForCommentSummary(response.comments);
+                        
                     } else {
                         commentsStatus.textContent = response.error || "Could not find any comments.";
                         commentsStatus.classList.add("text-red-400");
                     }
                 });
-            } else {
+             } else {
                 commentsLoader.classList.add('hidden');
                 commentsStatus.textContent = "Could not find an active tab.";
                 commentsStatus.classList.add("text-red-400");
-            }
+             }
         });
     }
 
@@ -335,7 +363,7 @@ ${question}
         commentSummaryText.innerHTML = "";
 
         const commentsString = comments
-            .slice(0, 20)
+            .slice(0, 20) 
             .map(c => `Author: ${c.author}\nComment: ${c.text}`)
             .join('\n\n---\n\n');
 
@@ -353,7 +381,9 @@ ${commentsString}
 Please provide a brief summary of the viewer opinion:
 `;
 
-        const apiKey = "YOUR-API-KEY";
+        const apiKey = "AIzaSyCDhG0gtXooTaIT33Ptfjrexjsnxtdwi3A"; 
+        
+        
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
         const payload = {
@@ -377,7 +407,7 @@ Please provide a brief summary of the viewer opinion:
             if (!response.ok) {
                 throw new Error(`API request failed with status ${response.status}`);
             }
-
+            
             const result = await response.json();
             const summary = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
@@ -386,6 +416,7 @@ Please provide a brief summary of the viewer opinion:
             } else {
                 throw new Error("No summary text found in API response.");
             }
+
         } catch (error) {
             console.error("Error summarizing comments:", error);
             commentSummaryText.innerHTML = `<p class="text-red-400">Could not generate a summary. ${error.message}</p>`;
@@ -396,16 +427,16 @@ Please provide a brief summary of the viewer opinion:
     }
 
     async function fetchWithBackoff(url, options, maxRetries = 5) {
-        let delay = 1000;
+        let delay = 1000; 
         for (let i = 0; i < maxRetries; i++) {
             try {
                 const response = await fetch(url, options);
                 if (!response.ok && (response.status === 429 || response.status >= 500)) {
                     throw new Error(`Retryable error: ${response.status}`);
                 }
-                return response;
+                return response; 
             } catch (error) {
-                if (i === maxRetries - 1) throw error;
+                if (i === maxRetries - 1) throw error; 
                 await new Promise(resolve => setTimeout(resolve, delay * (2 ** i)));
             }
         }
