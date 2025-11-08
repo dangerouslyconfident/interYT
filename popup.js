@@ -292,8 +292,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         answerContainer.classList.remove('hidden');
         answerText.classList.add('hidden'); 
-        loader.classList.remove('hidden'); 
         answerText.innerHTML = ""; 
+        loader.classList.remove('hidden'); 
+        
+        // Force a reflow to ensure loader is visible
+        void loader.offsetHeight;
 
         try {
             const enrichedTranscript = getEnrichedTranscript(transcript);
@@ -434,11 +437,14 @@ ${question}
     
     function handleFetchComments() {
         commentsContainer.classList.remove('hidden');
-        commentsLoader.classList.remove('hidden');
         commentsList.classList.add('hidden');
         commentsList.innerHTML = "";
         commentsStatus.textContent = "Attempting to fetch comments...";
         commentsStatus.classList.remove('text-red-400');
+        commentsLoader.classList.remove('hidden');
+        
+        // Force a reflow to ensure loader is visible
+        void commentsLoader.offsetHeight;
         
         commentSummaryContainer.classList.add('hidden');
         commentSummaryText.innerHTML = "";
@@ -506,6 +512,48 @@ ${question}
         });
     }
 
+    // Helper function to validate if a string is actual content (not metadata)
+    function isValidContentText(str) {
+        if (!str || typeof str !== 'string') return false;
+        if (str.length < 10) return false;
+        if (str.startsWith('HARM_') || str.startsWith('BLOCK_')) return false;
+        
+        // Exclude all-uppercase strings with underscores (like MAX_TOKENS, API_KEY, etc.)
+        if (/^[A-Z_]+$/.test(str)) return false;
+        
+        // Exclude model names and API-related strings
+        const excludePatterns = [
+            /^gemini-[\d.]+/i,  // Model names like "gemini-2.5-flash-preview-09-2025"
+            /^https?:\/\//i,   // URLs
+            /^[a-z]+:\/\/[a-z]/i,  // Protocol URLs
+            /^[a-z0-9-]+\.googleapis\.com/i,  // API endpoints
+            /^[a-z]+-[a-z]+-[a-z]+-[a-z]+-[a-z]+/i,  // Long hyphenated identifiers (model names)
+            /^[a-z0-9-]+\.[a-z0-9-]+\.[a-z0-9-]+/i,  // Domain-like strings
+            /\b(maxOutputTokens|max_tokens|MAX_TOKENS|temperature|apiKey|api_key|API_KEY)\b/i,  // API config keys
+            /^[A-Z_]+$/,  // All uppercase with underscores (constants)
+        ];
+        
+        for (const pattern of excludePatterns) {
+            if (pattern.test(str)) return false;
+        }
+        
+        // Exclude strings that are mostly uppercase constants
+        const uppercaseRatio = (str.match(/[A-Z_]/g) || []).length / str.length;
+        if (uppercaseRatio > 0.7 && str.length < 50) return false;
+        
+        // Must contain at least some letters (not just numbers/symbols/hyphens)
+        if (!/[a-zA-Z]{3,}/.test(str)) return false;
+        
+        // Exclude strings that are mostly hyphens and numbers (like model versions)
+        const nonHyphenChars = str.replace(/[-_]/g, '').length;
+        if (nonHyphenChars < str.length * 0.5) return false;
+        
+        // Must have some lowercase letters (actual content usually has lowercase)
+        if (!/[a-z]/.test(str) && str.length < 100) return false;
+        
+        return true;
+    }
+
     // Helper function to find text - now traverses ALL properties with cycle detection
     function findTextInObject(obj, maxDepth = 5, currentDepth = 0, visited = new WeakSet()) {
         if (currentDepth > maxDepth) return null;
@@ -520,7 +568,7 @@ ${question}
         
         for (const key of priorityKeys) {
             if (obj[key]) {
-                if (typeof obj[key] === 'string' && obj[key].length > 10 && !obj[key].startsWith('HARM_') && !obj[key].startsWith('BLOCK_')) {
+                if (typeof obj[key] === 'string' && isValidContentText(obj[key])) {
                     return obj[key];
                 }
                 if (typeof obj[key] === 'object') {
@@ -535,8 +583,19 @@ ${question}
             if (obj.hasOwnProperty(key) && !priorityKeys.includes(key)) {
                 const value = obj[key];
                 
+                // Skip known metadata keys
+                const metadataKeys = [
+                    'model', 'name', 'id', 'version', 'apiVersion', 'modelVersion', 'modelName',
+                    'token', 'tokens', 'maxTokens', 'maxOutputTokens', 'max_tokens', 'MAX_TOKENS',
+                    'temperature', 'apiKey', 'api_key', 'API_KEY', 'endpoint', 'url', 'uri',
+                    'status', 'code', 'error', 'message', 'type', 'finishReason', 'finish_reason'
+                ];
+                if (metadataKeys.some(mk => key.toLowerCase().includes(mk.toLowerCase()))) {
+                    continue;
+                }
+                
                 // Check if it's a valid text string
-                if (typeof value === 'string' && value.length > 10 && !value.startsWith('HARM_') && !value.startsWith('BLOCK_')) {
+                if (typeof value === 'string' && isValidContentText(value)) {
                     return value;
                 }
                 
@@ -553,9 +612,12 @@ ${question}
 
     async function callGeminiForCommentSummary(comments) {
         commentSummaryContainer.classList.remove('hidden');
-        commentSummaryLoader.classList.remove('hidden');
         commentSummaryText.classList.add('hidden');
         commentSummaryText.innerHTML = "";
+        commentSummaryLoader.classList.remove('hidden');
+        
+        // Force a reflow to ensure loader is visible
+        void commentSummaryLoader.offsetHeight;
 
         const commentsString = comments
             .slice(0, 20) 
@@ -577,8 +639,6 @@ Please provide a brief summary of the viewer opinion:
 `;
 
         const apiKey = await getApiKey(); 
-
-        
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
         const payload = {
@@ -600,104 +660,23 @@ Please provide a brief summary of the viewer opinion:
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error("[interYT] Comment summary API error:", response.status, errorText);
-                throw new Error(`API request failed with status ${response.status}`);
-            }
-            
-            const result = await response.json();
-            
-            console.log("[interYT] Comment summary full API response:", JSON.stringify(result, null, 2));
-            
-            // Check for safety ratings or blocked content
-            if (result.candidates?.[0]?.finishReason === 'SAFETY') {
-                console.error("[interYT] Content blocked by safety filters:", result.candidates[0]);
-                throw new Error("Content was blocked by safety filters. Try with different comments.");
-            }
-            
-            // Check for other finish reasons that might indicate issues
-            const finishReason = result.candidates?.[0]?.finishReason;
-            if (finishReason && finishReason !== 'STOP') {
-                console.warn("[interYT] Unusual finish reason:", finishReason);
-            }
-            
-            // Check for functionCall responses - text might be in functionCall.arguments
-            if (result.candidates?.[0]?.content?.parts?.[0]?.functionCall) {
-                const functionCall = result.candidates[0].content.parts[0].functionCall;
-                console.log("[interYT] Detected functionCall response:", functionCall);
-                
-                if (functionCall.args || functionCall.arguments) {
-                    try {
-                        const args = functionCall.args || functionCall.arguments;
-                        // Args might be a JSON string or already parsed object
-                        const argsObj = typeof args === 'string' ? JSON.parse(args) : args;
-                        console.log("[interYT] Parsed functionCall args:", argsObj);
-                        
-                        // Try to extract text from the args object
-                        const textFromArgs = findTextInObject(argsObj);
-                        if (textFromArgs) {
-                            console.log("[interYT] Found summary in functionCall.args");
-                            commentSummary = textFromArgs; // Store globally for sharing/export
-                            commentSummaryText.innerHTML = formatAnswerForDisplay(textFromArgs);
-                            commentSummaryText.classList.remove('hidden');
-                            return; // Exit early if we found it
-                        }
-                    } catch (e) {
-                        console.warn("[interYT] Error parsing functionCall args:", e);
-                    }
-                }
-            }
-            
-            // Try multiple paths to extract the summary text
-            let summary = null;
-            
-            // Path 1: Standard structure
-            if (!summary && result.candidates?.[0]?.content?.parts?.[0]?.text) {
-                summary = result.candidates[0].content.parts[0].text;
-                console.log("[interYT] Found summary via Path 1 (standard structure)");
-            }
-            
-            // Path 2: Direct text property
-            if (!summary && result.candidates?.[0]?.text) {
-                summary = result.candidates[0].text;
-                console.log("[interYT] Found summary via Path 2 (direct text)");
-            }
-            
-            // Path 3: Output property
-            if (!summary && result.candidates?.[0]?.output) {
-                summary = result.candidates[0].output;
-                console.log("[interYT] Found summary via Path 3 (output)");
-            }
-            
-            // Path 4: Check if there's text anywhere in the first candidate
-            if (!summary && result.candidates?.[0]) {
-                const candidate = result.candidates[0];
-                const textValue = findTextInObject(candidate);
-                if (textValue) {
-                    summary = textValue;
-                    console.log("[interYT] Found summary via Path 4 (findTextInObject in candidate)");
-                }
-            }
-            
-            // Path 5: Search the entire response object as final fallback
-            if (!summary) {
-                const textValue = findTextInObject(result);
-                if (textValue) {
-                    summary = textValue;
-                    console.log("[interYT] Found summary via Path 5 (findTextInObject in full result - final fallback)");
-                }
+                const errorBody = await response.text();
+                throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
             }
 
-            if (summary && summary.trim()) {
-                console.log("[interYT] Successfully extracted summary:", summary.substring(0, 100) + "...");
-                commentSummary = summary; // Store globally for sharing/export
+            const result = await response.json();
+            const candidate = result.candidates?.[0];
+
+            // EXACTLY like Q&A function - simple extraction
+            if (candidate && candidate.content?.parts?.[0]?.text) {
+                const summary = candidate.content.parts[0].text;
+                console.log("[interYT] Successfully extracted summary");
+                commentSummary = summary;
                 commentSummaryText.innerHTML = formatAnswerForDisplay(summary);
                 commentSummaryText.classList.remove('hidden');
             } else {
-                console.error("[interYT] Could not find summary text in any known path");
-                console.error("[interYT] Candidates array:", result.candidates);
-                console.error("[interYT] Full response structure:", JSON.stringify(result, null, 2));
-                throw new Error("API returned no text content. Response structure may have changed.");
+                console.warn("[interYT] Unexpected API response structure:", result);
+                throw new Error("Could not extract summary from API response.");
             }
 
         } catch (error) {
@@ -705,7 +684,6 @@ Please provide a brief summary of the viewer opinion:
             commentSummaryText.innerHTML = `<p class="text-red-400">😕 Could not generate a summary. ${error.message}</p>`;
             commentSummaryText.classList.remove('hidden');
         } finally {
-            // Always hide the summary loader in finally block
             if (commentSummaryLoader) commentSummaryLoader.classList.add('hidden');
         }
     }
@@ -793,8 +771,11 @@ Please provide a brief summary of the viewer opinion:
             }
 
             summaryContainer.classList.remove('hidden');
-            summaryLoader.classList.remove('hidden');
             summaryText.innerHTML = '';
+            summaryLoader.classList.remove('hidden');
+            
+            // Force a reflow to ensure loader is visible
+            void summaryLoader.offsetHeight;
 
             try {
                 const enrichedTranscript = getEnrichedTranscript(transcript);
@@ -901,8 +882,11 @@ Use markdown bullet points (-) for formatting.`;
             }
 
             relatedContainer.classList.remove('hidden');
-            relatedLoader.classList.remove('hidden');
             relatedList.innerHTML = '';
+            relatedLoader.classList.remove('hidden');
+            
+            // Force a reflow to ensure loader is visible
+            void relatedLoader.offsetHeight;
 
             try {
                 const enrichedTranscript = getEnrichedTranscript(transcript);
