@@ -1,0 +1,16 @@
+# Replit
+.replit
+.upm
+.config
+
+# System
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Temporary files
+*.log
+*.tmp

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>interYT Settings</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="popup.css">
+    <style>
+        body {
+            width: 500px;
+            min-height: 400px;
+        }
+        .settings-container {
+            padding: 2rem;
+        }
+        .settings-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .settings-group {
+            margin-bottom: 1.5rem;
+        }
+        .info-box {
+            background-color: #1A2632;
+            border-left: 4px solid #22D3EE;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0.5rem;
+        }
+        .info-box p {
+            margin: 0.5rem 0;
+            font-size: 0.875rem;
+            color: #B0BEC5;
+        }
+        .info-box a {
+            color: #22D3EE;
+            text-decoration: none;
+        }
+        .info-box a:hover {
+            text-decoration: underline;
+        }
+        .success-message {
+            background-color: #0f3a2e;
+            border-left-color: #10b981;
+            color: #6ee7b7;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        .error-message {
+            background-color: #3a0f0f;
+            border-left-color: #ef4444;
+            color: #fca5a5;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        .key-display {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #7F8C9A;
+            margin-top: 0.5rem;
+            word-break: break-all;
+        }
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .btn-secondary {
+            background-color: #1A2632;
+            border: 1px solid #293849;
+        }
+        .btn-secondary:hover {
+            background-color: #213040;
+        }
+    </style>
+</head>
+<body class="bg-dark-body text-gray-200">
+    <div class="settings-container">
+        <header class="settings-header">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient text-glow">
+                Settings
+            </h1>
+            <p class="mt-2 text-gray-400">
+                Configure your Google Gemini API key
+            </p>
+        </header>
+
+        <div class="info-box">
+            <p><strong>How to get your API key:</strong></p>
+            <p>1. Visit <a href="https://aistudio.google.com" target="_blank">Google AI Studio</a></p>
+            <p>2. Sign in with your Google account</p>
+            <p>3. Click "Get API key" → "Create API key in new project"</p>
+            <p>4. Copy the generated key and paste it below</p>
+        </div>
+
+        <div class="settings-group">
+            <label for="api-key" class="block text-sm font-medium text-gray-300 mb-2">
+                Google Gemini API Key
+            </label>
+            <input 
+                type="password" 
+                id="api-key" 
+                class="w-full p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300 focus-ring transition-all" 
+                placeholder="Enter your API key here..."
+            >
+            <div class="key-display" id="key-display"></div>
+        </div>
+
+        <div class="btn-group">
+            <button id="save-button" class="w-full bg-gradient-button text-white font-bold py-3 px-6 rounded-lg shadow-lg transform-hover transition-all">
+                Save API Key
+            </button>
+            <button id="clear-button" class="w-full btn-secondary text-white font-bold py-3 px-6 rounded-lg transition-all">
+                Clear Key
+            </button>
+        </div>
+
+        <div id="success-message" class="success-message">
+            ✓ API key saved successfully!
+        </div>
+
+        <div id="error-message" class="error-message">
+            Error saving API key. Please try again.
+        </div>
+
+        <div class="info-box" style="margin-top: 2rem;">
+            <p><strong>Privacy Notice:</strong></p>
+            <p>Your API key is stored securely in your browser's local storage and is never sent anywhere except to Google's Gemini API when you use this extension.</p>
+        </div>
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+</html>

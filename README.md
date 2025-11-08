@@ -1,87 +1,121 @@
-# interYT
+# interYT - YouTube Q&A Chrome Extension 🎥✨
 
-A browser extension that uses the Google Gemini API to answer questions about any YouTube video.
+**v0.2.0** - Enhanced with Settings Page & Better UX
 
-This tool automatically fetches the video's transcript, uses it as context, and leverages Google Search to provide comprehensive, context-aware answers to your questions.
+Ask questions about any YouTube video's transcript and get AI-powered answers with comment summarization!
+
+## ✨ What's New in v0.2.0
+
+### Easy API Key Management
+No more editing code files! The extension now has a built-in settings page:
+- Right-click extension icon → **Options**
+- Paste your Gemini API key
+- Click Save - Done!
+
+### Enhanced Features
+- 🔒 Secure API key storage using Chrome's encrypted storage
+- 🎯 Better error messages and user guidance
+- 🔄 Improved transcript/comment extraction with fallback selectors
+- 📝 Helpful hints if API key is missing
 
 ## Features
 
-Smart Transcript Fetching: Automatically detects and loads the open transcript on a YouTube video, short, or live stream.
+- **Smart Q&A**: Ask questions about video transcripts with AI-powered responses
+- **Comment Summarization**: Fetch top comments and get AI-generated sentiment analysis
+- **Context-Aware**: Distinguishes between directly related, contextually related, and unrelated questions
+- **Google Search Integration**: Enriches answers with real-time information
+- **Question History**: Saves your last 5 Q&A sessions
+- **Settings Page**: Easy API key configuration (NEW!)
 
-AI-Powered Answers: Uses gemini-2.5-flash to understand and answer your questions.
+## Quick Start
 
-Context-Aware: Intelligently determines if a question is directly related to the transcript, contextually related (e.g., "who is this YouTuber?"), or completely unrelated.
+### 1. Get a Google Gemini API Key
+1. Visit [Google AI Studio](https://aistudio.google.com)
+2. Sign in with your Google account
+3. Click "Get API key" → "Create API key in new project"
+4. Copy the generated key
 
-Google Search Integration: Enriches answers by fetching real-time, external information for contextually related questions.
+### 2. Install the Extension
+1. Download all extension files from this repository
+2. Go to `chrome://extensions` in Chrome/Edge/Brave
+3. Enable "Developer mode" (toggle in top-right)
+4. Click "Load unpacked"
+5. Select the folder containing the extension files
 
-Sleek UI: A clean, dark-mode popup that's easy to use.
+### 3. Configure Your API Key
+1. Right-click the extension icon in your browser toolbar
+2. Select "Options"
+3. Paste your API key and click "Save"
 
-Polite Rejection: Won't answer completely random, unrelated questions (e.g., "what's the weather?").
+### 4. Use the Extension
+1. Navigate to any YouTube video
+2. Click "..." under the video → "Show transcript"
+3. Click the interYT extension icon
+4. Ask questions or fetch comments!
 
-# Local Development & Installation
+## Files Included
 
-### Since this is not yet on the Chrome Web Store, you'll need to load it as an "unpacked" extension.
+**Required Files** (include all of these):
+- `manifest.json` - Extension configuration
+- `popup.html`, `popup.js`, `popup.css` - Main popup UI
+- `settings.html`, `settings.js` - Settings page (NEW!)
+- `content.js` - YouTube page content scraper
+- `images/` - Extension icons (icon16.png, icon48.png, icon128.png)
 
-## 1. Get the Code
+**Optional/Demo Files** (don't include in extension):
+- `demo/` - Web-based demo for Replit
+- `server.py` - Development server
+- `README.md`, `REPLIT_SETUP.md` - Documentation
 
-Clone this repository to your local machine:
+## How It Works
 
-git clone [https://github.com/dangerouslyconfident/interYT](https://github.com/dangerouslyconfident/interYT)
+1. **Transcript Extraction**: The extension scrapes the visible transcript from YouTube's page
+2. **Question Analysis**: Gemini AI categorizes your question (directly related, contextual, or unrelated)
+3. **AI Response**: Uses Gemini 2.5 Flash with Google Search to provide comprehensive answers
+4. **Comment Summarization**: Fetches top comments and generates sentiment analysis
 
+## Privacy & Security
 
-...or just download the ZIP and unzip it.
+- API keys are stored **locally** in your browser using Chrome's secure storage API
+- Keys are **encrypted** and only accessible to this extension
+- Your key is **never sent** anywhere except directly to Google's Gemini API
+- No data collection or tracking
 
-## 2. Get Your API Key (CRITICAL)
+## Troubleshooting
 
-This extension requires a Google Gemini API key to function.
+**"API key not configured"**
+→ Right-click extension icon → Options → Enter your API key
 
-Go to the Google AI Studio website.
+**"Could not find transcript"**
+→ Make sure transcript is open: Click "..." → "Show transcript" on YouTube
 
-Sign in and click "Get API key".
+**"No comments found"**
+→ Scroll down on the YouTube page to load comments first
 
-Click "Create API key in new project" and copy the generated key.
+**Extension won't load**
+→ Ensure you downloaded ALL required files, including settings.html and settings.js
 
-## 3. Add Your API Key
+**API calls failing**
+→ Check your API key is correct in Settings; verify it's active at Google AI Studio
 
-Open the project folder in your code editor.
+## Development
 
-Find and open the popup.js file.
+This extension uses:
+- **Manifest V3** (latest Chrome extension standard)
+- **Vanilla JavaScript** (no frameworks required)
+- **Google Gemini 2.5 Flash API**
+- **Chrome Storage API** for secure key storage
 
-On line where there is a const apiKey (or search for PASTE_YOUR_NEW_KEY_HERE), paste your API key inside the quotes:
+## License
 
-// Before:
-const apiKey = "PASTE_YOUR_NEW_KEY_HERE"; 
+See LICENSE file for details.
 
-// After:
-const apiKey = "A1zaS...YOUR_LONG_API_KEY_...s7B4"; 
+## Credits
 
+Original project by [dangerouslyconfident](https://github.com/dangerouslyconfident/interYT)
 
-Save the popup.js file.
+Enhanced version with settings page, improved UX, and better error handling.
 
-## 4. Load the Extension in Your Browser
+---
 
-Open Chrome, Edge, or any Chromium-based browser.
-
-Type chrome://extensions into your address bar and press Enter.
-
-Turn on the "Developer mode" toggle (usually in the top-right corner).
-
-Click the "Load unpacked" button.
-
-Select the entire project folder from your computer.
-
-The "interYT" extension will now appear, and its icon will be in your browser's toolbar.
-
-# How to Use
-
-Go to any YouTube video (or Short/Live) that has a transcript.
-
-Click the "..." (More) button under the video player.
-
-Click "Show transcript". The transcript will open on the side.
-
-Click the YouTube Q&A extension icon in your toolbar.
-
-The popup will open, and the "Video Transcript" box should automatically fill up. The status message will turn green.
-
-Ask a question (e.g., "What was the main point?", "How old is this YouTuber?") and click "Get Answer".
+**Enjoy smarter YouTube watching! 🎬🤖**
