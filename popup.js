@@ -417,6 +417,12 @@ ${question}
         }
     }
     
+    // Centralized function to hide ALL comment-related loaders
+    function hideCommentsLoaders() {
+        if (commentsLoader) commentsLoader.classList.add('hidden');
+        if (commentSummaryLoader) commentSummaryLoader.classList.add('hidden');
+    }
+    
     function handleFetchComments() {
         commentsContainer.classList.remove('hidden');
         commentsLoader.classList.remove('hidden');
@@ -428,11 +434,19 @@ ${question}
         commentSummaryContainer.classList.add('hidden');
         commentSummaryText.innerHTML = "";
         
+        // Fallback timeout to hide ALL loaders if callback never fires
+        const timeoutId = setTimeout(() => {
+            hideCommentsLoaders(); // Hide both loaders
+            commentsStatus.textContent = "Request timed out. Please try again.";
+            commentsStatus.classList.add("text-red-400");
+        }, 10000); // 10 second timeout
+        
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
              if (tabs && tabs[0]) {
                 const activeTab = tabs[0];
                 chrome.tabs.sendMessage(activeTab.id, { type: "FETCH_COMMENTS" }, (response) => {
-                    commentsLoader.classList.add('hidden');
+                    clearTimeout(timeoutId);
+                    hideCommentsLoaders(); // Always hide loaders when callback fires
                     commentsList.classList.remove('hidden');
 
                     if (chrome.runtime.lastError) {
@@ -470,45 +484,58 @@ ${question}
                         callGeminiForCommentSummary(response.comments);
                         
                     } else {
-                        commentsStatus.textContent = response.error || "Could not find any comments.";
+                        commentsStatus.textContent = response?.error || "Could not find any comments.";
                         commentsStatus.classList.add("text-red-400");
                     }
                 });
              } else {
-                commentsLoader.classList.add('hidden');
+                clearTimeout(timeoutId);
+                hideCommentsLoaders(); // Hide both loaders in else block
                 commentsStatus.textContent = "Could not find an active tab.";
                 commentsStatus.classList.add("text-red-400");
              }
         });
     }
 
-    // Helper function to find text in known response paths only
-    function findTextInObject(obj, maxDepth = 3, currentDepth = 0) {
+    // Helper function to find text - now traverses ALL properties with cycle detection
+    function findTextInObject(obj, maxDepth = 5, currentDepth = 0, visited = new WeakSet()) {
         if (currentDepth > maxDepth) return null;
         if (typeof obj !== 'object' || obj === null) return null;
         
-        // Only check specific known text-bearing properties
-        const validTextKeys = ['text', 'output', 'content', 'summary', 'message'];
+        // Cycle detection
+        if (visited.has(obj)) return null;
+        visited.add(obj);
         
-        for (const key of validTextKeys) {
+        // Priority keys - check these first for better performance
+        const priorityKeys = ['text', 'output', 'content', 'summary', 'message', 'result', 'answer', 'response'];
+        
+        for (const key of priorityKeys) {
             if (obj[key]) {
-                // If it's a string and looks like real content (not a category/enum)
-                if (typeof obj[key] === 'string' && obj[key].length > 20 && !obj[key].startsWith('HARM_')) {
+                if (typeof obj[key] === 'string' && obj[key].length > 10 && !obj[key].startsWith('HARM_') && !obj[key].startsWith('BLOCK_')) {
                     return obj[key];
                 }
-                // If it's an object or array, recurse
                 if (typeof obj[key] === 'object') {
-                    const result = findTextInObject(obj[key], maxDepth, currentDepth + 1);
+                    const result = findTextInObject(obj[key], maxDepth, currentDepth + 1, visited);
                     if (result) return result;
                 }
             }
         }
         
-        // Check for parts array (common in Gemini responses)
-        if (Array.isArray(obj.parts)) {
-            for (const part of obj.parts) {
-                const result = findTextInObject(part, maxDepth, currentDepth + 1);
-                if (result) return result;
+        // Traverse ALL other keys (not just whitelisted ones)
+        for (const key in obj) {
+            if (obj.hasOwnProperty(key) && !priorityKeys.includes(key)) {
+                const value = obj[key];
+                
+                // Check if it's a valid text string
+                if (typeof value === 'string' && value.length > 10 && !value.startsWith('HARM_') && !value.startsWith('BLOCK_')) {
+                    return value;
+                }
+                
+                // Recurse into objects and arrays
+                if (typeof value === 'object' && value !== null) {
+                    const result = findTextInObject(value, maxDepth, currentDepth + 1, visited);
+                    if (result) return result;
+                }
             }
         }
         
@@ -571,38 +598,96 @@ Please provide a brief summary of the viewer opinion:
             
             const result = await response.json();
             
+            console.log("[interYT] Comment summary full API response:", JSON.stringify(result, null, 2));
+            
             // Check for safety ratings or blocked content
             if (result.candidates?.[0]?.finishReason === 'SAFETY') {
+                console.error("[interYT] Content blocked by safety filters:", result.candidates[0]);
                 throw new Error("Content was blocked by safety filters. Try with different comments.");
+            }
+            
+            // Check for other finish reasons that might indicate issues
+            const finishReason = result.candidates?.[0]?.finishReason;
+            if (finishReason && finishReason !== 'STOP') {
+                console.warn("[interYT] Unusual finish reason:", finishReason);
+            }
+            
+            // Check for functionCall responses - text might be in functionCall.arguments
+            if (result.candidates?.[0]?.content?.parts?.[0]?.functionCall) {
+                const functionCall = result.candidates[0].content.parts[0].functionCall;
+                console.log("[interYT] Detected functionCall response:", functionCall);
+                
+                if (functionCall.args || functionCall.arguments) {
+                    try {
+                        const args = functionCall.args || functionCall.arguments;
+                        // Args might be a JSON string or already parsed object
+                        const argsObj = typeof args === 'string' ? JSON.parse(args) : args;
+                        console.log("[interYT] Parsed functionCall args:", argsObj);
+                        
+                        // Try to extract text from the args object
+                        const textFromArgs = findTextInObject(argsObj);
+                        if (textFromArgs) {
+                            console.log("[interYT] Found summary in functionCall.args");
+                            commentSummary = textFromArgs; // Store globally for sharing/export
+                            commentSummaryText.innerHTML = formatAnswerForDisplay(textFromArgs);
+                            commentSummaryText.classList.remove('hidden');
+                            return; // Exit early if we found it
+                        }
+                    } catch (e) {
+                        console.warn("[interYT] Error parsing functionCall args:", e);
+                    }
+                }
             }
             
             // Try multiple paths to extract the summary text
             let summary = null;
             
             // Path 1: Standard structure
-            if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+            if (!summary && result.candidates?.[0]?.content?.parts?.[0]?.text) {
                 summary = result.candidates[0].content.parts[0].text;
+                console.log("[interYT] Found summary via Path 1 (standard structure)");
             }
+            
             // Path 2: Direct text property
-            else if (result.candidates?.[0]?.text) {
+            if (!summary && result.candidates?.[0]?.text) {
                 summary = result.candidates[0].text;
+                console.log("[interYT] Found summary via Path 2 (direct text)");
             }
+            
             // Path 3: Output property
-            else if (result.candidates?.[0]?.output) {
+            if (!summary && result.candidates?.[0]?.output) {
                 summary = result.candidates[0].output;
+                console.log("[interYT] Found summary via Path 3 (output)");
             }
+            
             // Path 4: Check if there's text anywhere in the first candidate
-            else if (result.candidates?.[0]) {
+            if (!summary && result.candidates?.[0]) {
                 const candidate = result.candidates[0];
                 const textValue = findTextInObject(candidate);
-                if (textValue) summary = textValue;
+                if (textValue) {
+                    summary = textValue;
+                    console.log("[interYT] Found summary via Path 4 (findTextInObject in candidate)");
+                }
+            }
+            
+            // Path 5: Search the entire response object as final fallback
+            if (!summary) {
+                const textValue = findTextInObject(result);
+                if (textValue) {
+                    summary = textValue;
+                    console.log("[interYT] Found summary via Path 5 (findTextInObject in full result - final fallback)");
+                }
             }
 
             if (summary && summary.trim()) {
+                console.log("[interYT] Successfully extracted summary:", summary.substring(0, 100) + "...");
+                commentSummary = summary; // Store globally for sharing/export
                 commentSummaryText.innerHTML = formatAnswerForDisplay(summary);
                 commentSummaryText.classList.remove('hidden');
             } else {
-                console.error("[interYT] Could not find summary text. Response structure:", JSON.stringify(result, null, 2));
+                console.error("[interYT] Could not find summary text in any known path");
+                console.error("[interYT] Candidates array:", result.candidates);
+                console.error("[interYT] Full response structure:", JSON.stringify(result, null, 2));
                 throw new Error("API returned no text content. Response structure may have changed.");
             }
 
@@ -611,7 +696,8 @@ Please provide a brief summary of the viewer opinion:
             commentSummaryText.innerHTML = `<p class="text-red-400">😕 Could not generate a summary. ${error.message}</p>`;
             commentSummaryText.classList.remove('hidden');
         } finally {
-            commentSummaryLoader.classList.add('hidden');
+            // Always hide the summary loader in finally block
+            if (commentSummaryLoader) commentSummaryLoader.classList.add('hidden');
         }
     }
 
@@ -1154,10 +1240,14 @@ Use numbered list starting with "1." and separate title from description with " 
             text += `📝 Summary:\n${stripHtml(videoSummary)}\n\n`;
         }
 
+        if (commentSummary) {
+            text += `💬 Comment Sentiment:\n${stripHtml(commentSummary)}\n\n`;
+        }
+
         if (qaHistory.length > 0) {
             text += `❓ Q&A Highlights:\n`;
             qaHistory.slice(0, 3).forEach((item, index) => {
-                text += `\nQ: ${item.question}\nA: ${stripHtml(item.answer).substring(0, 150)}...\n`;
+                text += `\nQ: ${item.question}\nA: ${stripHtml(item.answer).substring(0, 10000)}...\n`;
             });
         }
 
