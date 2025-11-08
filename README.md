@@ -44,7 +44,7 @@
 ## 📦 Installation
 
 ### Prerequisites
-- Chrome, Edge, or Brave browser
+- Chromium based browser (sorry firefox, my love)
 - Google Gemini API key ([Get one free at AI Studio](https://aistudio.google.com))
 
 ### Steps
@@ -296,6 +296,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <p align="center">
   <sub>If you found this helpful, consider giving it a ⭐ on GitHub!</sub>
 </p>
+
 
 
 
