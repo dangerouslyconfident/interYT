@@ -291,9 +291,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <p align="center">
   Made with ❤️ by <a href="https://github.com/dangerouslyconfident">dangerouslyconfident</a>
+  Special thanks to <a href="https://github.com/shwetankg07">shwetankg07</a> 
 </p>
 
 <p align="center">
   <sub>If you found this helpful, consider giving it a ⭐ on GitHub!</sub>
 </p>
+
 
