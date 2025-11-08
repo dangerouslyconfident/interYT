@@ -262,7 +262,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - **Google Gemini API** - Powers all AI features
-- **jsPDF** - Enables PDF export functionality
+- **jsTXT** - Enables TXT export functionality
 - **YouTube** - For the platform and content
 - **Chrome Extensions Team** - For the Manifest V3 platform
 
@@ -296,3 +296,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <p align="center">
   <sub>If you found this helpful, consider giving it a ⭐ on GitHub!</sub>
 </p>
+
