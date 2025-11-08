@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const systemPrompt = `You are an expert Q&A assistant. You will be given a Video Transcript and a User Question.
 
 Your first task is to silently evaluate the User Question and place it into one of three categories:
-1.  **Directly Related:** The question can be answered using the text of the Video Transcript.
+1.  **Directly Related:** The question can be answered using the text of the Video Transcript. Even include questions based on the words used in the transcript (e.g "what is the meaning of X?" or "how many times is X used here?" etc.)
 2.  **Contextually Related:** The question is *about* the video's main topic or speaker (e.g., "Who is this YouTuber?", "How old are they?", "What other videos have they made?"), but the answer is *not* found in the transcript text.
 3.  **Unrelated:** The question is completely random and has no connection to the video transcript (e.g., "What's the weather?", "How do I bake a cake?").
 

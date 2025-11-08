@@ -47,7 +47,7 @@ Open the project folder in your code editor.
 
 Find and open the popup.js file.
 
-On line 90 (or search for PASTE_YOUR_NEW_KEY_HERE), paste your API key inside the quotes:
+On line where there is a const apiKey (or search for PASTE_YOUR_NEW_KEY_HERE), paste your API key inside the quotes:
 
 // Before:
 const apiKey = "PASTE_YOUR_NEW_KEY_HERE"; 

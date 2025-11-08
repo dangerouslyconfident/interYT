@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
-    "name": "YouTube Q&A",
-    "version": "1.2",
+    "name": "interYT",
+    "version": "0.1.3",
     "description": "Ask questions about a YouTube video transcript and get comment summaries.",
     "action": {
         "default_popup": "popup.html",
