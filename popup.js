@@ -65,15 +65,6 @@ function smoothHide(element) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Verify jsPDF library loads correctly
-    console.log('[interYT] Checking jsPDF library...');
-    if (window.jspdf && window.jspdf.jsPDF) {
-        console.log('[interYT] ✓ jsPDF loaded successfully (window.jspdf.jsPDF)');
-    } else if (window.jsPDF) {
-        console.log('[interYT] ✓ jsPDF loaded successfully (window.jsPDF)');
-    } else {
-        console.error('[interYT] ✗ jsPDF library not found! PDF export will not work.');
-    }
 
     let qaHistory = [];
     let activeTab = 'qa'; // Track current active tab
@@ -118,6 +109,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (askButton) {
         askButton.addEventListener('click', handleAskQuestion);
+    }
+    if (questionInput) {
+        questionInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent form submission or new line
+                handleAskQuestion();
+            }
+        });
     }
     if (fetchCommentsButton) {
         fetchCommentsButton.addEventListener('click', handleFetchComments);
@@ -922,7 +921,7 @@ IMPORTANT:
 - Separate title, description, and URL with " - "
 - Make sure URLs are complete and clickable`;
 
-        const userQuery = `Suggest related videos for:\n\n${transcript.substring(0, 10000)}...`;
+        const userQuery = `Suggest related videos for:\n\n${transcript.substring(0, 1000)}...`;
         
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
@@ -1138,136 +1137,66 @@ IMPORTANT:
 
     if (confirmExportBtn) {
         confirmExportBtn.addEventListener('click', () => {
-            generatePDF();
+            generateTXT();
             exportModal.classList.add('hidden');
         });
     }
 
-    function generatePDF() {
-        // Check for jsPDF in multiple possible locations
-        let jsPDF;
-        
-        if (window.jspdf && window.jspdf.jsPDF) {
-            jsPDF = window.jspdf.jsPDF;
-        } else if (window.jsPDF) {
-            jsPDF = window.jsPDF;
-        } else {
-            alert('PDF library not loaded. Please reload the extension and try again.');
-            console.error('[interYT] jsPDF library not available. Checked window.jspdf.jsPDF and window.jsPDF');
-            return;
-        }
-        
-        const doc = new jsPDF();
-        
+    function generateTXT() {
         const includeQA = document.getElementById('export-qa').checked;
         const includeSummary = document.getElementById('export-summary').checked;
         const includeComments = document.getElementById('export-comments').checked;
 
-        let yPos = 20;
-        const lineHeight = 7;
-        const pageHeight = doc.internal.pageSize.height;
-        const margin = 20;
+        let textContent = '';
 
         // Title
-        doc.setFontSize(18);
-        doc.setFont(undefined, 'bold');
-        doc.text('interYT - Video Insights Export', margin, yPos);
-        yPos += lineHeight * 2;
+        textContent += '='.repeat(60) + '\n';
+        textContent += 'interYT - Video Insights Export\n';
+        textContent += '='.repeat(60) + '\n\n';
 
         // Video URL
         if (currentVideoUrl) {
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            doc.text(`Video: ${currentVideoUrl}`, margin, yPos);
-            yPos += lineHeight * 2;
+            textContent += `Video: ${currentVideoUrl}\n\n`;
         }
 
         // Q&A History
         if (includeQA && qaHistory.length > 0) {
-            doc.setFontSize(14);
-            doc.setFont(undefined, 'bold');
-            doc.text('Q&A History', margin, yPos);
-            yPos += lineHeight;
-
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
+            textContent += '-'.repeat(60) + '\n';
+            textContent += 'Q&A History\n';
+            textContent += '-'.repeat(60) + '\n\n';
 
             qaHistory.forEach((item, index) => {
-                if (yPos > pageHeight - margin) {
-                    doc.addPage();
-                    yPos = margin;
-                }
-
-                doc.setFont(undefined, 'bold');
-                doc.text(`Q${index + 1}: ${item.question}`, margin, yPos);
-                yPos += lineHeight;
-
-                doc.setFont(undefined, 'normal');
-                const answerLines = doc.splitTextToSize(stripHtml(item.answer), 170);
-                answerLines.forEach(line => {
-                    if (yPos > pageHeight - margin) {
-                        doc.addPage();
-                        yPos = margin;
-                    }
-                    doc.text(line, margin, yPos);
-                    yPos += lineHeight;
-                });
-                yPos += lineHeight;
+                textContent += `Q${index + 1}: ${item.question}\n`;
+                textContent += `A${index + 1}: ${stripHtml(item.answer)}\n\n`;
             });
         }
 
         // Video Summary
         if (includeSummary && videoSummary) {
-            if (yPos > pageHeight - margin - 20) {
-                doc.addPage();
-                yPos = margin;
-            }
-
-            doc.setFontSize(14);
-            doc.setFont(undefined, 'bold');
-            doc.text('Video Summary', margin, yPos);
-            yPos += lineHeight;
-
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            const summaryLines = doc.splitTextToSize(stripHtml(videoSummary), 170);
-            summaryLines.forEach(line => {
-                if (yPos > pageHeight - margin) {
-                    doc.addPage();
-                    yPos = margin;
-                }
-                doc.text(line, margin, yPos);
-                yPos += lineHeight;
-            });
+            textContent += '-'.repeat(60) + '\n';
+            textContent += 'Video Summary\n';
+            textContent += '-'.repeat(60) + '\n\n';
+            textContent += `${stripHtml(videoSummary)}\n\n`;
         }
 
         // Comment Summary
         if (includeComments && commentSummary) {
-            if (yPos > pageHeight - margin - 20) {
-                doc.addPage();
-                yPos = margin;
-            }
-
-            doc.setFontSize(14);
-            doc.setFont(undefined, 'bold');
-            doc.text('Comment Summary', margin, yPos);
-            yPos += lineHeight;
-
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            const commentLines = doc.splitTextToSize(stripHtml(commentSummary), 170);
-            commentLines.forEach(line => {
-                if (yPos > pageHeight - margin) {
-                    doc.addPage();
-                    yPos = margin;
-                }
-                doc.text(line, margin, yPos);
-                yPos += lineHeight;
-            });
+            textContent += '-'.repeat(60) + '\n';
+            textContent += 'Comment Summary\n';
+            textContent += '-'.repeat(60) + '\n\n';
+            textContent += `${stripHtml(commentSummary)}\n\n`;
         }
 
-        // Save
-        doc.save('interYT-export.pdf');
+        // Create and download the text file
+        const blob = new Blob([textContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'interYT-export.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     function stripHtml(html) {
@@ -1370,4 +1299,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
