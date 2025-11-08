@@ -348,7 +348,7 @@ ${question}
             tools: [{ "google_search": {} }], 
             generationConfig: {
                 temperature: 0.2, 
-                maxOutputTokens: 1024,
+                maxOutputTokens: 2048,
             }
         };
 
@@ -552,7 +552,7 @@ Please provide a brief summary of the viewer opinion:
             },
             generationConfig: {
                 temperature: 0.3,
-                maxOutputTokens: 256,
+                maxOutputTokens: 512,
             }
         };
 
@@ -722,13 +722,14 @@ Please provide a brief summary of the viewer opinion:
 
     async function generateVideoSummary(transcript) {
         const apiKey = await getApiKey();
-        const systemPrompt = `You are a video summarization expert. Generate a comprehensive summary of the video transcript in bullet point format. Include:
-- Main topic/theme
-- Key points (5-7 points)
-- Important takeaways
-- Conclusions
+        const systemPrompt = `You are a video summarization expert. Generate a concise summary with 5-7 bullet points.
 
-Format using markdown bullet points.`;
+Keep each bullet point brief (1-2 sentences) and focused on:
+- Main topic/theme
+- Key points covered
+- Important takeaways
+
+Use markdown bullet points (-) for formatting.`;
 
         const userQuery = `Summarize this video transcript:\n\n${transcript}`;
         
@@ -739,7 +740,7 @@ Format using markdown bullet points.`;
             systemInstruction: { parts: [{ text: systemPrompt }] },
             generationConfig: {
                 temperature: 0.3,
-                maxOutputTokens: 1024,
+                maxOutputTokens: 1536,
             }
         };
 
@@ -749,10 +750,22 @@ Format using markdown bullet points.`;
             body: JSON.stringify(payload),
         });
 
-        if (!response.ok) throw new Error('Summary generation failed');
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[interYT] Summary API error:', response.status, errorText);
+            throw new Error('Summary generation failed');
+        }
         
         const result = await response.json();
-        return result.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate summary';
+        console.log('[interYT] Summary API response:', result);
+        
+        const summaryText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!summaryText) {
+            console.warn('[interYT] No summary text in response:', result);
+            return 'Could not generate summary';
+        }
+        
+        return summaryText;
     }
 
     function formatSummary(text) {
@@ -816,11 +829,16 @@ Format using markdown bullet points.`;
 
     async function findRelatedVideos(transcript) {
         const apiKey = await getApiKey();
-        const systemPrompt = `Based on the video transcript, suggest 4-5 related YouTube videos that would help viewers learn more about this topic. For each suggestion, provide:
-1. A descriptive title
-2. A brief reason why it's relevant (1 sentence)
+        const systemPrompt = `Suggest 4-5 related YouTube videos for deeper learning on this topic.
 
-Format as a list with clear separators.`;
+REQUIRED FORMAT (follow exactly):
+1. Title of First Video - Brief reason why it's relevant (one sentence)
+2. Title of Second Video - Brief reason why it's relevant (one sentence)
+3. Title of Third Video - Brief reason why it's relevant (one sentence)
+4. Title of Fourth Video - Brief reason why it's relevant (one sentence)
+5. Title of Fifth Video - Brief reason why it's relevant (one sentence)
+
+Use numbered list starting with "1." and separate title from description with " - "`;
 
         const userQuery = `Suggest related videos for:\n\n${transcript.substring(0, 1000)}...`;
         
@@ -847,23 +865,83 @@ Format as a list with clear separators.`;
         const result = await response.json();
         const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
         
+        console.log('[interYT] Related videos raw response:', text);
+        
         // Parse the response into video suggestions
         return parseVideoSuggestions(text);
     }
 
     function parseVideoSuggestions(text) {
-        // Simple parsing - split by newlines and group title + description
-        const lines = text.split('\n').filter(l => l.trim());
         const videos = [];
+        const lines = text.split('\n').filter(l => l.trim());
         
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line.match(/^\d+\./)) {
-                // This is a title line
-                const title = line.replace(/^\d+\.\s*\*?\*?/, '').replace(/\*\*/g, '');
-                const description = lines[i + 1] || '';
-                videos.push({ title, description });
+        for (const line of lines) {
+            const trimmed = line.trim();
+            
+            // Pattern 1: "1. Title - Description" (preferred format)
+            let match = trimmed.match(/^\d+\.\s*(.+?)\s*-\s*(.+)$/);
+            if (match) {
+                videos.push({
+                    title: match[1].trim().replace(/\*\*/g, ''),
+                    description: match[2].trim().replace(/\*\*/g, '')
+                });
+                continue;
             }
+            
+            // Pattern 2: "1. Title: Description"
+            match = trimmed.match(/^\d+\.\s*(.+?)\s*:\s*(.+)$/);
+            if (match) {
+                videos.push({
+                    title: match[1].trim().replace(/\*\*/g, ''),
+                    description: match[2].trim().replace(/\*\*/g, '')
+                });
+                continue;
+            }
+            
+            // Pattern 3: "1. **Title** - Description" or "1. **Title**: Description"
+            match = trimmed.match(/^\d+\.\s*\*\*(.+?)\*\*\s*[-:]\s*(.+)$/);
+            if (match) {
+                videos.push({
+                    title: match[1].trim(),
+                    description: match[2].trim().replace(/\*\*/g, '')
+                });
+                continue;
+            }
+            
+            // Pattern 4: Bullet points "• Title - Description" or "- Title - Description"
+            match = trimmed.match(/^[•\-]\s*(.+?)\s*[\-:]\s*(.+)$/);
+            if (match) {
+                videos.push({
+                    title: match[1].trim().replace(/\*\*/g, ''),
+                    description: match[2].trim().replace(/\*\*/g, '')
+                });
+                continue;
+            }
+            
+            // Pattern 5: Just numbered item with title only "1. Some Title"
+            match = trimmed.match(/^\d+\.\s*(.+)$/);
+            if (match) {
+                const content = match[1].trim().replace(/\*\*/g, '');
+                // Split on common separators if present
+                const parts = content.split(/\s*[-:]\s*/);
+                if (parts.length >= 2) {
+                    videos.push({
+                        title: parts[0].trim(),
+                        description: parts.slice(1).join(' - ').trim()
+                    });
+                } else {
+                    videos.push({
+                        title: content,
+                        description: 'Related to this topic'
+                    });
+                }
+            }
+        }
+        
+        if (videos.length === 0) {
+            console.warn('[interYT] Failed to parse any videos from response:', text);
+        } else {
+            console.log(`[interYT] Successfully parsed ${videos.length} related videos`);
         }
         
         return videos.slice(0, 5);
