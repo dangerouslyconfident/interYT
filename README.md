@@ -278,14 +278,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🎯 Future Roadmap
 
-- [ ] Export/import Q&A history
+- [ ] Import Q&A history
 - [ ] Custom AI prompt templates
 - [ ] Support for more video platforms (Vimeo, Dailymotion)
 - [ ] Batch comment analysis
 - [ ] Bookmark favorite Q&A sessions
 - [ ] Dark/light theme toggle
 - [ ] Keyboard shortcuts
-- [ ] Multi-language support
 
 ---
 
@@ -297,6 +296,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <p align="center">
   <sub>If you found this helpful, consider giving it a ⭐ on GitHub!</sub>
 </p>
+
 
 
 
