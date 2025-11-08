@@ -776,13 +776,27 @@ Please provide a brief summary of the viewer opinion:
             // Force a reflow to ensure loader is visible
             void summaryLoader.offsetHeight;
 
+            // Smooth scroll to summary container
+            setTimeout(() => {
+                summaryContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 100);
+
             try {
                 const enrichedTranscript = getEnrichedTranscript(transcript);
                 const summary = await generateVideoSummary(enrichedTranscript);
                 videoSummary = summary;
                 summaryText.innerHTML = formatSummary(summary);
+                
+                // Scroll again after content is loaded to ensure we're at the bottom
+                setTimeout(() => {
+                    summaryContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 100);
             } catch (error) {
                 summaryText.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`;
+                // Scroll to error message
+                setTimeout(() => {
+                    summaryContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 100);
             } finally {
                 summaryLoader.classList.add('hidden');
             }
@@ -887,12 +901,26 @@ Use markdown bullet points (-) for formatting.`;
             // Force a reflow to ensure loader is visible
             void relatedLoader.offsetHeight;
 
+            // Smooth scroll to related videos container
+            setTimeout(() => {
+                relatedContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 100);
+
             try {
                 const enrichedTranscript = getEnrichedTranscript(transcript);
                 const videos = await findRelatedVideos(enrichedTranscript);
                 displayRelatedVideos(videos);
+                
+                // Scroll again after content is loaded to ensure we're at the bottom
+                setTimeout(() => {
+                    relatedContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 100);
             } catch (error) {
                 relatedList.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`;
+                // Scroll to error message
+                setTimeout(() => {
+                    relatedContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 100);
             } finally {
                 relatedLoader.classList.add('hidden');
             }
