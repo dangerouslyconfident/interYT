@@ -1305,7 +1305,7 @@ IMPORTANT: Include actual YouTube video URLs. Use numbered list starting with "1
         if (qaHistory.length > 0) {
             text += `❓ Q&A Highlights:\n`;
             qaHistory.slice(0, 3).forEach((item, index) => {
-                text += `\nQ: ${item.question}\nA: ${stripHtml(item.answer).substring(0, 10000)}...\n`;
+                text += `\nQ: ${item.question}\nA: ${stripHtml(item.answer).substring(0, 10000000)}...\n`;
             });
         }
 
