@@ -908,16 +908,19 @@ Use markdown bullet points (-) for formatting.`;
 
     async function findRelatedVideos(transcript) {
         const apiKey = await getApiKey();
-        const systemPrompt = `Suggest 4-5 related YouTube videos for deeper learning on this topic.
+        const systemPrompt = `Suggest 1-3 related videos on this topic. extrapolate the topic from the transcript and the question. make sure the videos are related to the topic.
 
 REQUIRED FORMAT (follow exactly):
 1. Title of First Video - Brief reason why it's relevant - https://youtube.com/watch?v=VIDEO_ID
 2. Title of Second Video - Brief reason why it's relevant - https://youtube.com/watch?v=VIDEO_ID
 3. Title of Third Video - Brief reason why it's relevant - https://youtube.com/watch?v=VIDEO_ID
-4. Title of Fourth Video - Brief reason why it's relevant - https://youtube.com/watch?v=VIDEO_ID
-5. Title of Fifth Video - Brief reason why it's relevant - https://youtube.com/watch?v=VIDEO_ID
 
-IMPORTANT: Include actual YouTube video URLs. Use numbered list starting with "1." and separate title, description, and URL with " - "`;
+IMPORTANT: 
+- Provide 1-3 videos (minimum 1, maximum 3)
+- Include actual YouTube video URLs
+- Use numbered list starting with "1." 
+- Separate title, description, and URL with " - "
+- Make sure URLs are complete and clickable`;
 
         const userQuery = `Suggest related videos for:\n\n${transcript.substring(0, 1000)}...`;
         
@@ -1073,7 +1076,9 @@ IMPORTANT: Include actual YouTube video URLs. Use numbered list starting with "1
             console.log(`[interYT] Successfully parsed ${videos.length} related videos`);
         }
         
-        return videos.slice(0, 5);
+        // Return min 1, max 3 videos
+        const filteredVideos = videos.filter(v => v.title && v.title.trim().length > 0);
+        return filteredVideos.slice(0, 3);
     }
 
     function displayRelatedVideos(videos) {
@@ -1083,17 +1088,24 @@ IMPORTANT: Include actual YouTube video URLs. Use numbered list starting with "1
         }
 
         relatedList.innerHTML = videos.map((video, index) => {
-            const hasUrl = video.url && video.url.trim();
+            const hasUrl = video.url && video.url.trim() && video.url.includes('youtube.com');
             const linkUrl = hasUrl 
                 ? video.url 
                 : `https://www.youtube.com/results?search_query=${encodeURIComponent(video.title)}`;
             const linkText = hasUrl ? '🔗 Watch Video' : '🔍 Search on YouTube';
             
+            // Escape HTML to prevent XSS
+            const escapeHtml = (text) => {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
+            
             return `
                 <div class="related-video-item">
-                    <div class="related-video-title">${index + 1}. ${video.title}</div>
-                    <div class="related-video-description">${video.description}</div>
-                    <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" class="related-video-link">
+                    <div class="related-video-title">${index + 1}. ${escapeHtml(video.title)}</div>
+                    <div class="related-video-description">${escapeHtml(video.description || 'Related to this topic')}</div>
+                    <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" class="related-video-link" style="display: inline-block; margin-top: 0.5rem; color: #22D3EE; text-decoration: underline; font-weight: 600;">
                         ${linkText} →
                     </a>
                 </div>
