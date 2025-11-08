@@ -229,11 +229,6 @@ Contributions are welcome! Here's how you can help:
 4. **Push to the branch** (`git push origin feature/AmazingFeature`)
 5. **Open a Pull Request**
 
-### Development Workflow
-1. Edit files in your IDE/Replit
-2. Go to `chrome://extensions` in your browser
-3. Click the reload icon on interYT extension card
-4. Test on YouTube videos
 
 ### Testing Checklist
 - [ ] Extension loads without errors
