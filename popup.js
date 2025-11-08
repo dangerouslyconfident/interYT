@@ -17,6 +17,52 @@ async function getApiKey() {
     });
 }
 
+/**
+ * Store active timeouts for smooth transitions
+ */
+const hideTimeouts = new WeakMap();
+
+/**
+ * Smooth show helper - displays element with fade-in animation
+ */
+function smoothShow(element) {
+    if (!element) return;
+    
+    // Cancel any pending hide for this element
+    const timeout = hideTimeouts.get(element);
+    if (timeout) {
+        clearTimeout(timeout);
+        hideTimeouts.delete(element);
+    }
+    
+    element.classList.remove('hiding');
+    element.classList.remove('hidden');
+}
+
+/**
+ * Smooth hide helper - fades out element then hides it
+ */
+function smoothHide(element) {
+    if (!element) return;
+    
+    // Cancel any existing timeout first
+    const existingTimeout = hideTimeouts.get(element);
+    if (existingTimeout) {
+        clearTimeout(existingTimeout);
+    }
+    
+    element.classList.add('hiding');
+    
+    // Schedule the actual hide
+    const timeout = setTimeout(() => {
+        element.classList.remove('hiding');
+        element.classList.add('hidden');
+        hideTimeouts.delete(element);
+    }, 300); // Match CSS transition duration
+    
+    hideTimeouts.set(element, timeout);
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -134,22 +180,24 @@ document.addEventListener('DOMContentLoaded', () => {
         commentsTabButton.classList.remove('active');
         toolsTabButton.classList.remove('active');
         
-        // Hide all tab contents
-        qaTabContent.classList.add('hidden');
-        commentsTabContent.classList.add('hidden');
-        toolsTabContent.classList.add('hidden');
+        // Smoothly hide all tab contents
+        smoothHide(qaTabContent);
+        smoothHide(commentsTabContent);
+        smoothHide(toolsTabContent);
         
-        // Show selected tab
-        if (tab === 'qa') {
-            qaTabButton.classList.add('active');
-            qaTabContent.classList.remove('hidden');
-        } else if (tab === 'comments') {
-            commentsTabButton.classList.add('active');
-            commentsTabContent.classList.remove('hidden');
-        } else if (tab === 'tools') {
-            toolsTabButton.classList.add('active');
-            toolsTabContent.classList.remove('hidden');
-        }
+        // Show selected tab with smooth transition
+        setTimeout(() => {
+            if (tab === 'qa') {
+                qaTabButton.classList.add('active');
+                smoothShow(qaTabContent);
+            } else if (tab === 'comments') {
+                commentsTabButton.classList.add('active');
+                smoothShow(commentsTabContent);
+            } else if (tab === 'tools') {
+                toolsTabButton.classList.add('active');
+                smoothShow(toolsTabContent);
+            }
+        }, 150); // Small delay for smooth transition between tabs
     }
 
     function autoFetchTranscript() {
@@ -434,6 +482,39 @@ ${question}
         });
     }
 
+    // Helper function to find text in known response paths only
+    function findTextInObject(obj, maxDepth = 3, currentDepth = 0) {
+        if (currentDepth > maxDepth) return null;
+        if (typeof obj !== 'object' || obj === null) return null;
+        
+        // Only check specific known text-bearing properties
+        const validTextKeys = ['text', 'output', 'content', 'summary', 'message'];
+        
+        for (const key of validTextKeys) {
+            if (obj[key]) {
+                // If it's a string and looks like real content (not a category/enum)
+                if (typeof obj[key] === 'string' && obj[key].length > 20 && !obj[key].startsWith('HARM_')) {
+                    return obj[key];
+                }
+                // If it's an object or array, recurse
+                if (typeof obj[key] === 'object') {
+                    const result = findTextInObject(obj[key], maxDepth, currentDepth + 1);
+                    if (result) return result;
+                }
+            }
+        }
+        
+        // Check for parts array (common in Gemini responses)
+        if (Array.isArray(obj.parts)) {
+            for (const part of obj.parts) {
+                const result = findTextInObject(part, maxDepth, currentDepth + 1);
+                if (result) return result;
+            }
+        }
+        
+        return null;
+    }
+
     async function callGeminiForCommentSummary(comments) {
         commentSummaryContainer.classList.remove('hidden');
         commentSummaryLoader.classList.remove('hidden');
@@ -483,24 +564,54 @@ Please provide a brief summary of the viewer opinion:
             });
 
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error("[interYT] Comment summary API error:", response.status, errorText);
                 throw new Error(`API request failed with status ${response.status}`);
             }
             
             const result = await response.json();
-            const summary = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            // Check for safety ratings or blocked content
+            if (result.candidates?.[0]?.finishReason === 'SAFETY') {
+                throw new Error("Content was blocked by safety filters. Try with different comments.");
+            }
+            
+            // Try multiple paths to extract the summary text
+            let summary = null;
+            
+            // Path 1: Standard structure
+            if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                summary = result.candidates[0].content.parts[0].text;
+            }
+            // Path 2: Direct text property
+            else if (result.candidates?.[0]?.text) {
+                summary = result.candidates[0].text;
+            }
+            // Path 3: Output property
+            else if (result.candidates?.[0]?.output) {
+                summary = result.candidates[0].output;
+            }
+            // Path 4: Check if there's text anywhere in the first candidate
+            else if (result.candidates?.[0]) {
+                const candidate = result.candidates[0];
+                const textValue = findTextInObject(candidate);
+                if (textValue) summary = textValue;
+            }
 
-            if (summary) {
+            if (summary && summary.trim()) {
                 commentSummaryText.innerHTML = formatAnswerForDisplay(summary);
+                commentSummaryText.classList.remove('hidden');
             } else {
-                throw new Error("No summary text found in API response.");
+                console.error("[interYT] Could not find summary text. Response structure:", JSON.stringify(result, null, 2));
+                throw new Error("API returned no text content. Response structure may have changed.");
             }
 
         } catch (error) {
-            console.error("Error summarizing comments:", error);
-            commentSummaryText.innerHTML = `<p class="text-red-400">Could not generate a summary. ${error.message}</p>`;
+            console.error("[interYT] Error summarizing comments:", error);
+            commentSummaryText.innerHTML = `<p class="text-red-400">😕 Could not generate a summary. ${error.message}</p>`;
+            commentSummaryText.classList.remove('hidden');
         } finally {
             commentSummaryLoader.classList.add('hidden');
-            commentSummaryText.classList.remove('hidden');
         }
     }
 
