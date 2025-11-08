@@ -2,7 +2,7 @@
 
 > AI-powered YouTube video analysis using Google's Gemini 2.5 Flash API
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/dangerouslyconfident/interYT)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/dangerouslyconfident/interYT)
 [![Chrome Extension](https://img.shields.io/badge/chrome-extension-green.svg)](https://developer.chrome.com/docs/extensions)
 [![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
 
@@ -16,7 +16,7 @@
 - 🤖 **AI-Powered Q&A** - Ask questions about video content with context-aware answers using Gemini 2.5 Flash
 - 📝 **Video Summarization** - Generate concise bullet-point summaries (up to 1536 tokens for comprehensive coverage)
 - 💬 **Comment Analysis** - Fetch and analyze top comments with AI-powered sentiment summaries (512 tokens)
-- 🎥 **Related Videos** - Get AI-suggested videos for deeper learning on the topic
+- 🔗 **Related Videos** - Get AI-suggested videos with direct YouTube links (🔗) or search fallback (🔍)
 - 🔍 **Google Search Integration** - Enriched answers with real-time external information
 
 ### Enhanced Context
@@ -150,6 +150,13 @@ interYT/
 
 ## 📋 Changelog
 
+### v1.1.0 - Clickable YouTube Links (November 08, 2025)
+- 🔗 **Added**: Related videos now include direct YouTube links when Gemini provides URLs
+- 🎯 **Enhanced**: Smart URL parser handles 9 different Gemini response formats (numbered lists, bullets, with/without URLs)
+- ✨ **Visual Indicators**: 🔗 icon for direct video links, 🔍 icon for YouTube search fallback
+- 🛡️ **Backward Compatible**: Gracefully falls back to YouTube search when URLs not available
+- 🚀 **Improved UX**: Click opens exact video directly instead of searching - instant access!
+
 ### v1.0.0 - Production Release - Share & Export Fixes (November 08, 2025)
 - 🎉 **Stable Release**: First production-ready version with all major features working reliably
 - 🐛 **Fixed**: Comment summary now properly stored for sharing/export (was showing "gemini-preview...")
@@ -229,6 +236,11 @@ Contributions are welcome! Here's how you can help:
 4. **Push to the branch** (`git push origin feature/AmazingFeature`)
 5. **Open a Pull Request**
 
+### Development Workflow
+1. Edit files in your IDE/Replit
+2. Go to `chrome://extensions` in your browser
+3. Click the reload icon on interYT extension card
+4. Test on YouTube videos
 
 ### Testing Checklist
 - [ ] Extension loads without errors

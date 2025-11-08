@@ -65,6 +65,15 @@ function smoothHide(element) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Verify jsPDF library loads correctly
+    console.log('[interYT] Checking jsPDF library...');
+    if (window.jspdf && window.jspdf.jsPDF) {
+        console.log('[interYT] ✓ jsPDF loaded successfully (window.jspdf.jsPDF)');
+    } else if (window.jsPDF) {
+        console.log('[interYT] ✓ jsPDF loaded successfully (window.jsPDF)');
+    } else {
+        console.error('[interYT] ✗ jsPDF library not found! PDF export will not work.');
+    }
 
     let qaHistory = [];
     let activeTab = 'qa'; // Track current active tab
@@ -1091,15 +1100,18 @@ IMPORTANT: Include actual YouTube video URLs. Use numbered list starting with "1
 
         relatedList.innerHTML = videos.map((video, index) => {
             const hasUrl = video.url && video.url.trim();
-            const onClick = hasUrl 
-                ? `window.open('${video.url}', '_blank')` 
-                : `searchYouTube('${video.title.replace(/'/g, "\\'")}')`;
-            const linkIndicator = hasUrl ? '🔗 ' : '🔍 ';
+            const linkUrl = hasUrl 
+                ? video.url 
+                : `https://www.youtube.com/results?search_query=${encodeURIComponent(video.title)}`;
+            const linkText = hasUrl ? '🔗 Watch Video' : '🔍 Search on YouTube';
             
             return `
-                <div class="related-video-item" onclick="${onClick}" style="cursor: pointer;">
-                    <div class="related-video-title">${linkIndicator}${index + 1}. ${video.title}</div>
+                <div class="related-video-item">
+                    <div class="related-video-title">${index + 1}. ${video.title}</div>
                     <div class="related-video-description">${video.description}</div>
+                    <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" class="related-video-link">
+                        ${linkText} →
+                    </a>
                 </div>
             `;
         }).join('');
@@ -1136,7 +1148,19 @@ IMPORTANT: Include actual YouTube video URLs. Use numbered list starting with "1
     }
 
     function generatePDF() {
-        const { jsPDF } = window.jspdf;
+        // Check for jsPDF in multiple possible locations
+        let jsPDF;
+        
+        if (window.jspdf && window.jspdf.jsPDF) {
+            jsPDF = window.jspdf.jsPDF;
+        } else if (window.jsPDF) {
+            jsPDF = window.jsPDF;
+        } else {
+            alert('PDF library not loaded. Please reload the extension and try again.');
+            console.error('[interYT] jsPDF library not available. Checked window.jspdf.jsPDF and window.jsPDF');
+            return;
+        }
+        
         const doc = new jsPDF();
         
         const includeQA = document.getElementById('export-qa').checked;
@@ -1305,7 +1329,7 @@ IMPORTANT: Include actual YouTube video URLs. Use numbered list starting with "1
         if (qaHistory.length > 0) {
             text += `❓ Q&A Highlights:\n`;
             qaHistory.slice(0, 3).forEach((item, index) => {
-                text += `\nQ: ${item.question}\nA: ${stripHtml(item.answer).substring(0, 10000000)}...\n`;
+                text += `\nQ: ${item.question}\nA: ${stripHtml(item.answer).substring(0, 10000)}...\n`;
             });
         }
 

@@ -455,7 +455,6 @@ textarea::-webkit-scrollbar-thumb,
     border: 1px solid #293849;
     border-radius: 0.5rem;
     padding: 1rem;
-    cursor: pointer;
     transition: all 0.3s ease-out;
 }
 
@@ -473,6 +472,21 @@ textarea::-webkit-scrollbar-thumb,
 .related-video-description {
     color: #94A3B8;
     font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.related-video-link {
+    color: #60a5fa;
+    text-decoration: none;
+    font-size: 0.8125rem;
+    display: inline-block;
+    margin-top: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.related-video-link:hover {
+    color: #93c5fd;
+    text-decoration: underline;
 }
 
 /* Timestamp Links */
