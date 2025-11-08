@@ -918,13 +918,13 @@ Use markdown bullet points (-) for formatting.`;
         const systemPrompt = `Suggest 4-5 related YouTube videos for deeper learning on this topic.
 
 REQUIRED FORMAT (follow exactly):
-1. Title of First Video - Brief reason why it's relevant (one sentence)
-2. Title of Second Video - Brief reason why it's relevant (one sentence)
-3. Title of Third Video - Brief reason why it's relevant (one sentence)
-4. Title of Fourth Video - Brief reason why it's relevant (one sentence)
-5. Title of Fifth Video - Brief reason why it's relevant (one sentence)
+1. Title of First Video - Brief reason why it's relevant - https://youtube.com/watch?v=VIDEO_ID
+2. Title of Second Video - Brief reason why it's relevant - https://youtube.com/watch?v=VIDEO_ID
+3. Title of Third Video - Brief reason why it's relevant - https://youtube.com/watch?v=VIDEO_ID
+4. Title of Fourth Video - Brief reason why it's relevant - https://youtube.com/watch?v=VIDEO_ID
+5. Title of Fifth Video - Brief reason why it's relevant - https://youtube.com/watch?v=VIDEO_ID
 
-Use numbered list starting with "1." and separate title from description with " - "`;
+IMPORTANT: Include actual YouTube video URLs. Use numbered list starting with "1." and separate title, description, and URL with " - "`;
 
         const userQuery = `Suggest related videos for:\n\n${transcript.substring(0, 1000)}...`;
         
@@ -964,47 +964,95 @@ Use numbered list starting with "1." and separate title from description with " 
         for (const line of lines) {
             const trimmed = line.trim();
             
-            // Pattern 1: "1. Title - Description" (preferred format)
-            let match = trimmed.match(/^\d+\.\s*(.+?)\s*-\s*(.+)$/);
+            // Pattern 1: "1. Title - Description - URL" (new format with URL)
+            let match = trimmed.match(/^\d+\.\s*(.+?)\s*-\s*(.+?)\s*-\s*(https?:\/\/[^\s]+)$/);
             if (match) {
                 videos.push({
                     title: match[1].trim().replace(/\*\*/g, ''),
-                    description: match[2].trim().replace(/\*\*/g, '')
+                    description: match[2].trim().replace(/\*\*/g, ''),
+                    url: match[3].trim()
                 });
                 continue;
             }
             
-            // Pattern 2: "1. Title: Description"
+            // Pattern 2: "1. Title - Description" (fallback without URL)
+            match = trimmed.match(/^\d+\.\s*(.+?)\s*-\s*(.+)$/);
+            if (match) {
+                videos.push({
+                    title: match[1].trim().replace(/\*\*/g, ''),
+                    description: match[2].trim().replace(/\*\*/g, ''),
+                    url: null
+                });
+                continue;
+            }
+            
+            // Pattern 3: "1. Title: Description - URL"
+            match = trimmed.match(/^\d+\.\s*(.+?)\s*:\s*(.+?)\s*-\s*(https?:\/\/[^\s]+)$/);
+            if (match) {
+                videos.push({
+                    title: match[1].trim().replace(/\*\*/g, ''),
+                    description: match[2].trim().replace(/\*\*/g, ''),
+                    url: match[3].trim()
+                });
+                continue;
+            }
+            
+            // Pattern 4: "1. Title: Description" (fallback without URL)
             match = trimmed.match(/^\d+\.\s*(.+?)\s*:\s*(.+)$/);
             if (match) {
                 videos.push({
                     title: match[1].trim().replace(/\*\*/g, ''),
-                    description: match[2].trim().replace(/\*\*/g, '')
+                    description: match[2].trim().replace(/\*\*/g, ''),
+                    url: null
                 });
                 continue;
             }
             
-            // Pattern 3: "1. **Title** - Description" or "1. **Title**: Description"
+            // Pattern 5: "1. **Title** - Description - URL" or "1. **Title**: Description - URL"
+            match = trimmed.match(/^\d+\.\s*\*\*(.+?)\*\*\s*[-:]\s*(.+?)\s*-\s*(https?:\/\/[^\s]+)$/);
+            if (match) {
+                videos.push({
+                    title: match[1].trim(),
+                    description: match[2].trim().replace(/\*\*/g, ''),
+                    url: match[3].trim()
+                });
+                continue;
+            }
+            
+            // Pattern 6: "1. **Title** - Description" (fallback without URL)
             match = trimmed.match(/^\d+\.\s*\*\*(.+?)\*\*\s*[-:]\s*(.+)$/);
             if (match) {
                 videos.push({
                     title: match[1].trim(),
-                    description: match[2].trim().replace(/\*\*/g, '')
+                    description: match[2].trim().replace(/\*\*/g, ''),
+                    url: null
                 });
                 continue;
             }
             
-            // Pattern 4: Bullet points "• Title - Description" or "- Title - Description"
+            // Pattern 7: Bullet points with URL
+            match = trimmed.match(/^[•\-]\s*(.+?)\s*[-:]\s*(.+?)\s*-\s*(https?:\/\/[^\s]+)$/);
+            if (match) {
+                videos.push({
+                    title: match[1].trim().replace(/\*\*/g, ''),
+                    description: match[2].trim().replace(/\*\*/g, ''),
+                    url: match[3].trim()
+                });
+                continue;
+            }
+            
+            // Pattern 8: Bullet points without URL
             match = trimmed.match(/^[•\-]\s*(.+?)\s*[\-:]\s*(.+)$/);
             if (match) {
                 videos.push({
                     title: match[1].trim().replace(/\*\*/g, ''),
-                    description: match[2].trim().replace(/\*\*/g, '')
+                    description: match[2].trim().replace(/\*\*/g, ''),
+                    url: null
                 });
                 continue;
             }
             
-            // Pattern 5: Just numbered item with title only "1. Some Title"
+            // Pattern 9: Just numbered item with title only "1. Some Title"
             match = trimmed.match(/^\d+\.\s*(.+)$/);
             if (match) {
                 const content = match[1].trim().replace(/\*\*/g, '');
@@ -1013,12 +1061,14 @@ Use numbered list starting with "1." and separate title from description with " 
                 if (parts.length >= 2) {
                     videos.push({
                         title: parts[0].trim(),
-                        description: parts.slice(1).join(' - ').trim()
+                        description: parts.slice(1).join(' - ').trim(),
+                        url: null
                     });
                 } else {
                     videos.push({
                         title: content,
-                        description: 'Related to this topic'
+                        description: 'Related to this topic',
+                        url: null
                     });
                 }
             }
@@ -1039,12 +1089,20 @@ Use numbered list starting with "1." and separate title from description with " 
             return;
         }
 
-        relatedList.innerHTML = videos.map((video, index) => `
-            <div class="related-video-item" onclick="searchYouTube('${video.title.replace(/'/g, "\\'")}')">
-                <div class="related-video-title">${index + 1}. ${video.title}</div>
-                <div class="related-video-description">${video.description}</div>
-            </div>
-        `).join('');
+        relatedList.innerHTML = videos.map((video, index) => {
+            const hasUrl = video.url && video.url.trim();
+            const onClick = hasUrl 
+                ? `window.open('${video.url}', '_blank')` 
+                : `searchYouTube('${video.title.replace(/'/g, "\\'")}')`;
+            const linkIndicator = hasUrl ? '🔗 ' : '🔍 ';
+            
+            return `
+                <div class="related-video-item" onclick="${onClick}" style="cursor: pointer;">
+                    <div class="related-video-title">${linkIndicator}${index + 1}. ${video.title}</div>
+                    <div class="related-video-description">${video.description}</div>
+                </div>
+            `;
+        }).join('');
     }
 
     window.searchYouTube = function(query) {
