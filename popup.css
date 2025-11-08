@@ -75,7 +75,7 @@ textarea, input[type="text"] {
     border: 1px solid #293849;
     border-radius: 0.5rem;
     color: #E0E0E0;
-    transition: all 0.2s;
+    transition: all 0.3s ease-out;
 }
 
 textarea:focus, input[type="text"]:focus {
@@ -134,6 +134,30 @@ textarea:focus, input[type="text"]:focus {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* Smooth fade-in animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Subtle scale animation */
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 #answer-text, #comments-list, #comment-summary-text {
@@ -195,7 +219,7 @@ textarea:focus, input[type="text"]:focus {
     cursor: pointer;
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease-out;
 }
 #clear-history-button:hover {
     background-color: rgba(248, 113, 113, 0.1);
@@ -238,4 +262,324 @@ textarea::-webkit-scrollbar-thumb,
     background-color: #4A5C70;
     border-radius: 20px;
     border: 2px solid #1A2632;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.quick-action-btn {
+    background-color: #1A2632;
+    color: #E0E0E0;
+    border: 1px solid #293849;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease-out;
+}
+
+.quick-action-btn:nth-child(1) { animation: fadeIn 0.3s ease-out 0.05s both; }
+.quick-action-btn:nth-child(2) { animation: fadeIn 0.3s ease-out 0.1s both; }
+.quick-action-btn:nth-child(3) { animation: fadeIn 0.3s ease-out 0.15s both; }
+.quick-action-btn:nth-child(4) { animation: fadeIn 0.3s ease-out 0.2s both; }
+
+.quick-action-btn:hover {
+    background-color: #213040;
+    border-color: #22D3EE;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2);
+}
+
+/* Summary and Related Videos Sections */
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #293849;
+}
+
+.summary-content {
+    line-height: 1.6;
+}
+
+.summary-content ul {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.summary-content li {
+    margin: 0.5rem 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #7F8C9A;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    transition: all 0.3s ease-out;
+}
+
+.close-btn:hover {
+    background-color: #1A2632;
+    color: #E0E0E0;
+}
+
+/* Related Videos List */
+.related-video-item {
+    background-color: #1A2632;
+    border: 1px solid #293849;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease-out;
+}
+
+.related-video-item:hover {
+    border-color: #22D3EE;
+    background-color: #213040;
+}
+
+.related-video-title {
+    color: #22D3EE;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.related-video-description {
+    color: #94A3B8;
+    font-size: 0.875rem;
+}
+
+/* Timestamp Links */
+.timestamp-link {
+    display: inline-flex;
+    align-items: center;
+    background-color: #14B8A6;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    margin: 0.125rem;
+    transition: all 0.3s ease-out;
+}
+
+.timestamp-link:hover {
+    background-color: #0EA5E9;
+    transform: translateY(-1px);
+}
+
+.timestamp-link::before {
+    content: "🕐";
+    margin-right: 0.25rem;
+}
+
+/* Modals */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(11, 17, 23, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background-color: #1D2A3A;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #293849;
+}
+
+.modal-body {
+    padding: 0;
+}
+
+/* Share Buttons */
+.share-buttons {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.share-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease-out;
+    font-size: 0.9375rem;
+}
+
+.share-btn.whatsapp {
+    background-color: #25D366;
+    color: white;
+}
+
+.share-btn.whatsapp:hover {
+    background-color: #1FAF4F;
+}
+
+.share-btn.telegram {
+    background-color: #0088cc;
+    color: white;
+}
+
+.share-btn.telegram:hover {
+    background-color: #0077B5;
+}
+
+.share-icon {
+    font-size: 1.25rem;
+}
+
+/* Export Options */
+.export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.export-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background-color: #1A2632;
+    border: 1px solid #293849;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease-out;
+}
+
+.export-option:hover {
+    background-color: #213040;
+    border-color: #22D3EE;
+}
+
+.export-option input[type="checkbox"] {
+    width: 1.125rem;
+    height: 1.125rem;
+    cursor: pointer;
+}
+
+.export-option span {
+    color: #E0E0E0;
+    font-size: 0.9375rem;
+}
+
+/* Smooth animations for dynamic content */
+#summary-result,
+#related-videos-result {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.related-video-item {
+    transition: all 0.3s ease-out;
+}
+
+.related-video-item:hover {
+    transform: translateX(4px);
+    background-color: #213040;
+}
+
+/* Smooth tab transitions */
+#qa-tab-content,
+#comments-tab-content {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Smooth answer display */
+#answer-container {
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* Timestamp links smooth hover */
+.timestamp-link {
+    transition: all 0.25s ease-out;
+}
+
+.timestamp-link:hover {
+    transform: scale(1.05);
+    text-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
+}
+
+/* Tool Sections */
+.tool-section {
+    background-color: #1A2632;
+    border: 1px solid #293849;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+}
+
+.tool-section h3 {
+    border-bottom: 1px solid #293849;
+    padding-bottom: 0.5rem;
+}
+
+.quick-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-align: left;
+    padding: 1rem;
+}
+
+.tool-icon {
+    font-size: 1.75rem;
+    flex-shrink: 0;
+}
+
+.tool-info {
+    flex: 1;
+}
+
+.tool-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #E0E0E0;
+    margin-bottom: 0.25rem;
+}
+
+.tool-desc {
+    font-size: 0.8rem;
+    color: #94A3B8;
 }

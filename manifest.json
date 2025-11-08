@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "interYT",
-    "version": "0.2.0",
-    "description": "Ask questions about YouTube video transcripts and get AI-powered comment summaries using Google Gemini.",
+    "version": "0.3.0",
+    "description": "Ask questions about YouTube video transcripts, get AI-powered summaries, export to PDF, and share insights using Google Gemini.",
     "action": {
         "default_popup": "popup.html",
         "default_icon": {

@@ -21,11 +21,16 @@ async function getApiKey() {
 document.addEventListener('DOMContentLoaded', () => {
 
     let qaHistory = [];
+    let activeTab = 'qa'; // Track current active tab
+    let videoChannelName = null; // Store channel name for context
+    let videoDescription = null; // Store video description for context
 
     const qaTabButton = document.getElementById('tab-qa');
     const commentsTabButton = document.getElementById('tab-comments');
+    const toolsTabButton = document.getElementById('tab-tools');
     const qaTabContent = document.getElementById('qa-tab-content');
     const commentsTabContent = document.getElementById('comments-tab-content');
+    const toolsTabContent = document.getElementById('tools-tab-content');
 
     const askButton = document.getElementById('ask-button');
     const transcriptInput = document.getElementById('transcript');
@@ -52,6 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (commentsTabButton) {
         commentsTabButton.addEventListener('click', () => switchTab('comments'));
+    }
+    if (toolsTabButton) {
+        toolsTabButton.addEventListener('click', () => switchTab('tools'));
     }
     if (askButton) {
         askButton.addEventListener('click', handleAskQuestion);
@@ -119,16 +127,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function switchTab(tab) {
+        activeTab = tab; // Update active tab state
+        
+        // Remove active class from all tabs
+        qaTabButton.classList.remove('active');
+        commentsTabButton.classList.remove('active');
+        toolsTabButton.classList.remove('active');
+        
+        // Hide all tab contents
+        qaTabContent.classList.add('hidden');
+        commentsTabContent.classList.add('hidden');
+        toolsTabContent.classList.add('hidden');
+        
+        // Show selected tab
         if (tab === 'qa') {
             qaTabButton.classList.add('active');
-            commentsTabButton.classList.remove('active');
             qaTabContent.classList.remove('hidden');
-            commentsTabContent.classList.add('hidden');
         } else if (tab === 'comments') {
-            qaTabButton.classList.remove('active');
             commentsTabButton.classList.add('active');
-            qaTabContent.classList.add('hidden');
             commentsTabContent.classList.remove('hidden');
+        } else if (tab === 'tools') {
+            toolsTabButton.classList.add('active');
+            toolsTabContent.classList.remove('hidden');
         }
     }
 
@@ -151,7 +171,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             transcriptStatus.classList.add("text-red-400");
                         } else if (response && response.transcript) {
                             transcriptInput.value = response.transcript;
-                            transcriptStatus.textContent = `Successfully fetched ${response.transcript.split(' ').length} words.`;
+                            videoChannelName = response.channelName;
+                            videoDescription = response.description;
+                            
+                            let statusMsg = `Successfully fetched ${response.transcript.split(' ').length} words.`;
+                            if (videoChannelName) statusMsg += ` (${videoChannelName})`;
+                            
+                            transcriptStatus.textContent = statusMsg;
                             transcriptStatus.classList.add("text-green-400");
                         } else {
                             transcriptInput.placeholder = "No transcript found. Please open it on the page.";
@@ -169,6 +195,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 transcriptStatus.classList.add("text-red-400");
             }
         });
+    }
+
+    function getEnrichedTranscript(transcript) {
+        if (!transcript) return transcript;
+        
+        let enriched = "";
+        
+        if (videoChannelName) {
+            enriched += `CHANNEL: ${videoChannelName}\n\n`;
+        }
+        
+        if (videoDescription) {
+            enriched += `VIDEO DESCRIPTION: ${videoDescription}\n\n`;
+        }
+        
+        enriched += `TRANSCRIPT:\n${transcript}`;
+        
+        return enriched;
     }
 
     async function handleAskQuestion() {
@@ -195,7 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
         answerText.innerHTML = ""; 
 
         try {
-            const aiResponse = await callGeminiApi(transcript, question);
+            const enrichedTranscript = getEnrichedTranscript(transcript);
+            const aiResponse = await callGeminiApi(enrichedTranscript, question);
             
             showMessage(aiResponse, "success");
             saveToHistory(question, aiResponse); 
@@ -225,6 +270,8 @@ Your actions will be based on this evaluation:
     * Use the transcript as the primary context (if relevant).
     * Use your built-in knowledge and Google Search tools to provide a comprehensive, detailed answer.
     * Just give the answer directly. Do not add any disclaimers about it being from general knowledge.
+    * Format your answer with bullet points for clarity when appropriate.
+    * When referencing specific moments in the video, include timestamps in MM:SS or HH:MM:SS format (e.g., "at 2:15" or "at 1:23:45").
 
 * **If the question is in Category 3 (Unrelated):**
     * You MUST NOT answer the question.
@@ -472,6 +519,489 @@ Please provide a brief summary of the viewer opinion:
             }
         }
     }
+
+    // Global state for summaries
+    let videoSummary = null;
+    let currentVideoUrl = null;
+    let commentSummary = null;
+
+    // Get current video URL
+    function getCurrentVideoUrl() {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs && tabs[0]) {
+                currentVideoUrl = tabs[0].url;
+            }
+        });
+    }
+    getCurrentVideoUrl();
+
+
+
+    // Timestamp linking - parse and link timestamps in answers
+    function parseTimestamps(text) {
+        // Match patterns like "at 1:23", "at 12:34", "12:45", etc.
+        const timestampPattern = /(?:at\s+)?(\d{1,2}):(\d{2})(?::(\d{2}))?/g;
+        
+        return text.replace(timestampPattern, (match, h, m, s) => {
+            let seconds;
+            if (s !== undefined) {
+                // Format: HH:MM:SS
+                seconds = parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(s);
+            } else {
+                // Format: MM:SS
+                seconds = parseInt(h) * 60 + parseInt(m);
+            }
+            
+            if (currentVideoUrl) {
+                const url = new URL(currentVideoUrl);
+                const videoId = url.searchParams.get('v');
+                if (videoId) {
+                    const timestampUrl = `https://www.youtube.com/watch?v=${videoId}&t=${seconds}s`;
+                    return `<a href="${timestampUrl}" target="_blank" class="timestamp-link">${match}</a>`;
+                }
+            }
+            return `<span class="timestamp-link">${match}</span>`;
+        });
+    }
+
+    // Update formatAnswerForDisplay to include timestamp parsing
+    const originalFormatAnswerForDisplay = window.formatAnswerForDisplay || formatAnswerForDisplay;
+    window.formatAnswerForDisplay = function(text) {
+        let formatted = originalFormatAnswerForDisplay ? originalFormatAnswerForDisplay(text) : text;
+        return parseTimestamps(formatted);
+    };
+
+    // Summarize Video Feature
+    const summarizeBtn = document.getElementById('summarize-video-btn');
+    const summaryContainer = document.getElementById('summary-container');
+    const summaryLoader = document.getElementById('summary-loader');
+    const summaryText = document.getElementById('summary-text');
+    const closeSummaryBtn = document.getElementById('close-summary-btn');
+
+    if (summarizeBtn) {
+        summarizeBtn.addEventListener('click', async () => {
+            const transcript = transcriptInput.value.trim();
+            if (!transcript) {
+                alert('Please load a transcript first');
+                return;
+            }
+
+            summaryContainer.classList.remove('hidden');
+            summaryLoader.classList.remove('hidden');
+            summaryText.innerHTML = '';
+
+            try {
+                const enrichedTranscript = getEnrichedTranscript(transcript);
+                const summary = await generateVideoSummary(enrichedTranscript);
+                videoSummary = summary;
+                summaryText.innerHTML = formatSummary(summary);
+            } catch (error) {
+                summaryText.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`;
+            } finally {
+                summaryLoader.classList.add('hidden');
+            }
+        });
+    }
+
+    if (closeSummaryBtn) {
+        closeSummaryBtn.addEventListener('click', () => {
+            summaryContainer.classList.add('hidden');
+        });
+    }
+
+    async function generateVideoSummary(transcript) {
+        const apiKey = await getApiKey();
+        const systemPrompt = `You are a video summarization expert. Generate a comprehensive summary of the video transcript in bullet point format. Include:
+- Main topic/theme
+- Key points (5-7 points)
+- Important takeaways
+- Conclusions
+
+Format using markdown bullet points.`;
+
+        const userQuery = `Summarize this video transcript:\n\n${transcript}`;
+        
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        const payload = {
+            contents: [{ parts: [{ text: userQuery }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 1024,
+            }
+        };
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) throw new Error('Summary generation failed');
+        
+        const result = await response.json();
+        return result.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate summary';
+    }
+
+    function formatSummary(text) {
+        // Convert markdown-style formatting to HTML
+        let html = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/^[-•]\s+(.+)$/gm, '<li>$1</li>')
+            .replace(/^(\d+\.)\s+(.+)$/gm, '<li>$2</li>');
+        
+        // Wrap consecutive <li> elements in <ul>
+        html = html.replace(/(<li>.*<\/li>\n?)+/gs, (match) => `<ul>${match}</ul>`);
+        
+        // Wrap paragraphs
+        html = html.split('\n\n').map(para => {
+            if (!para.startsWith('<ul>') && !para.startsWith('<li>')) {
+                return `<p>${para}</p>`;
+            }
+            return para;
+        }).join('');
+        
+        return html;
+    }
+
+    // Related Videos Feature
+    const relatedBtn = document.getElementById('related-videos-btn');
+    const relatedContainer = document.getElementById('related-videos-container');
+    const relatedLoader = document.getElementById('related-loader');
+    const relatedList = document.getElementById('related-videos-list');
+    const closeRelatedBtn = document.getElementById('close-related-btn');
+
+    if (relatedBtn) {
+        relatedBtn.addEventListener('click', async () => {
+            const transcript = transcriptInput.value.trim();
+            if (!transcript) {
+                alert('Please load a transcript first');
+                return;
+            }
+
+            relatedContainer.classList.remove('hidden');
+            relatedLoader.classList.remove('hidden');
+            relatedList.innerHTML = '';
+
+            try {
+                const enrichedTranscript = getEnrichedTranscript(transcript);
+                const videos = await findRelatedVideos(enrichedTranscript);
+                displayRelatedVideos(videos);
+            } catch (error) {
+                relatedList.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`;
+            } finally {
+                relatedLoader.classList.add('hidden');
+            }
+        });
+    }
+
+    if (closeRelatedBtn) {
+        closeRelatedBtn.addEventListener('click', () => {
+            relatedContainer.classList.add('hidden');
+        });
+    }
+
+    async function findRelatedVideos(transcript) {
+        const apiKey = await getApiKey();
+        const systemPrompt = `Based on the video transcript, suggest 4-5 related YouTube videos that would help viewers learn more about this topic. For each suggestion, provide:
+1. A descriptive title
+2. A brief reason why it's relevant (1 sentence)
+
+Format as a list with clear separators.`;
+
+        const userQuery = `Suggest related videos for:\n\n${transcript.substring(0, 1000)}...`;
+        
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        const payload = {
+            contents: [{ parts: [{ text: userQuery }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            tools: [{ "google_search": {} }],
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 512,
+            }
+        };
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) throw new Error('Failed to find related videos');
+        
+        const result = await response.json();
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        
+        // Parse the response into video suggestions
+        return parseVideoSuggestions(text);
+    }
+
+    function parseVideoSuggestions(text) {
+        // Simple parsing - split by newlines and group title + description
+        const lines = text.split('\n').filter(l => l.trim());
+        const videos = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.match(/^\d+\./)) {
+                // This is a title line
+                const title = line.replace(/^\d+\.\s*\*?\*?/, '').replace(/\*\*/g, '');
+                const description = lines[i + 1] || '';
+                videos.push({ title, description });
+            }
+        }
+        
+        return videos.slice(0, 5);
+    }
+
+    function displayRelatedVideos(videos) {
+        if (videos.length === 0) {
+            relatedList.innerHTML = '<p class="text-gray-400">No related videos found.</p>';
+            return;
+        }
+
+        relatedList.innerHTML = videos.map((video, index) => `
+            <div class="related-video-item" onclick="searchYouTube('${video.title.replace(/'/g, "\\'")}')">
+                <div class="related-video-title">${index + 1}. ${video.title}</div>
+                <div class="related-video-description">${video.description}</div>
+            </div>
+        `).join('');
+    }
+
+    window.searchYouTube = function(query) {
+        const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+        window.open(searchUrl, '_blank');
+    };
+
+    // Export to PDF Feature
+    const exportBtn = document.getElementById('export-btn');
+    const exportModal = document.getElementById('export-modal');
+    const closeExportModal = document.getElementById('close-export-modal');
+    const confirmExportBtn = document.getElementById('confirm-export-btn');
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            exportModal.classList.remove('hidden');
+        });
+    }
+
+    if (closeExportModal) {
+        closeExportModal.addEventListener('click', () => {
+            exportModal.classList.add('hidden');
+        });
+    }
+
+    if (confirmExportBtn) {
+        confirmExportBtn.addEventListener('click', () => {
+            generatePDF();
+            exportModal.classList.add('hidden');
+        });
+    }
+
+    function generatePDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        const includeQA = document.getElementById('export-qa').checked;
+        const includeSummary = document.getElementById('export-summary').checked;
+        const includeComments = document.getElementById('export-comments').checked;
+
+        let yPos = 20;
+        const lineHeight = 7;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 20;
+
+        // Title
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('interYT - Video Insights Export', margin, yPos);
+        yPos += lineHeight * 2;
+
+        // Video URL
+        if (currentVideoUrl) {
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Video: ${currentVideoUrl}`, margin, yPos);
+            yPos += lineHeight * 2;
+        }
+
+        // Q&A History
+        if (includeQA && qaHistory.length > 0) {
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('Q&A History', margin, yPos);
+            yPos += lineHeight;
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+
+            qaHistory.forEach((item, index) => {
+                if (yPos > pageHeight - margin) {
+                    doc.addPage();
+                    yPos = margin;
+                }
+
+                doc.setFont(undefined, 'bold');
+                doc.text(`Q${index + 1}: ${item.question}`, margin, yPos);
+                yPos += lineHeight;
+
+                doc.setFont(undefined, 'normal');
+                const answerLines = doc.splitTextToSize(stripHtml(item.answer), 170);
+                answerLines.forEach(line => {
+                    if (yPos > pageHeight - margin) {
+                        doc.addPage();
+                        yPos = margin;
+                    }
+                    doc.text(line, margin, yPos);
+                    yPos += lineHeight;
+                });
+                yPos += lineHeight;
+            });
+        }
+
+        // Video Summary
+        if (includeSummary && videoSummary) {
+            if (yPos > pageHeight - margin - 20) {
+                doc.addPage();
+                yPos = margin;
+            }
+
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('Video Summary', margin, yPos);
+            yPos += lineHeight;
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const summaryLines = doc.splitTextToSize(stripHtml(videoSummary), 170);
+            summaryLines.forEach(line => {
+                if (yPos > pageHeight - margin) {
+                    doc.addPage();
+                    yPos = margin;
+                }
+                doc.text(line, margin, yPos);
+                yPos += lineHeight;
+            });
+        }
+
+        // Comment Summary
+        if (includeComments && commentSummary) {
+            if (yPos > pageHeight - margin - 20) {
+                doc.addPage();
+                yPos = margin;
+            }
+
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('Comment Summary', margin, yPos);
+            yPos += lineHeight;
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const commentLines = doc.splitTextToSize(stripHtml(commentSummary), 170);
+            commentLines.forEach(line => {
+                if (yPos > pageHeight - margin) {
+                    doc.addPage();
+                    yPos = margin;
+                }
+                doc.text(line, margin, yPos);
+                yPos += lineHeight;
+            });
+        }
+
+        // Save
+        doc.save('interYT-export.pdf');
+    }
+
+    function stripHtml(html) {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || '';
+    }
+
+    // Share Feature
+    const shareBtn = document.getElementById('share-btn');
+    const shareModal = document.getElementById('share-modal');
+    const closeShareModal = document.getElementById('close-share-modal');
+    const shareWhatsappBtn = document.getElementById('share-whatsapp-btn');
+    const shareTelegramBtn = document.getElementById('share-telegram-btn');
+
+    if (shareBtn) {
+        shareBtn.addEventListener('click', () => {
+            shareModal.classList.remove('hidden');
+        });
+    }
+
+    if (closeShareModal) {
+        closeShareModal.addEventListener('click', () => {
+            shareModal.classList.add('hidden');
+        });
+    }
+
+    if (shareWhatsappBtn) {
+        shareWhatsappBtn.addEventListener('click', () => {
+            shareToWhatsApp();
+        });
+    }
+
+    if (shareTelegramBtn) {
+        shareTelegramBtn.addEventListener('click', () => {
+            shareToTelegram();
+        });
+    }
+
+    function formatShareText() {
+        let text = '🎥 *YouTube Video Insights*\n\n';
+        
+        if (currentVideoUrl) {
+            text += `Video: ${currentVideoUrl}\n\n`;
+        }
+
+        if (videoSummary) {
+            text += `📝 Summary:\n${stripHtml(videoSummary)}\n\n`;
+        }
+
+        if (qaHistory.length > 0) {
+            text += `❓ Q&A Highlights:\n`;
+            qaHistory.slice(0, 3).forEach((item, index) => {
+                text += `\nQ: ${item.question}\nA: ${stripHtml(item.answer).substring(0, 150)}...\n`;
+            });
+        }
+
+        text += '\n\n✨ Powered by interYT Extension';
+        
+        return text;
+    }
+
+    function shareToWhatsApp() {
+        const text = formatShareText();
+        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+        shareModal.classList.add('hidden');
+    }
+
+    function shareToTelegram() {
+        const text = formatShareText();
+        const url = `https://t.me/share/url?url=${encodeURIComponent(currentVideoUrl || '')}&text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+        shareModal.classList.add('hidden');
+    }
+
+    // Store comment summary when it's generated
+    const originalSummarizeComments = window.summarizeComments || (() => {});
+    window.summarizeComments = function(comments) {
+        const result = originalSummarizeComments(comments);
+        if (result) {
+            result.then(summary => {
+                commentSummary = summary;
+            });
+        }
+        return result;
+    };
 });
 // Add handler for opening settings
 document.addEventListener('DOMContentLoaded', () => {

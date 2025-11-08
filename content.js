@@ -25,6 +25,54 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 /**
+ * Extract channel name from YouTube page with fallback selectors
+ */
+function getChannelName() {
+    const selectors = [
+        "#channel-name yt-formatted-string",
+        "ytd-channel-name a",
+        "#owner-name a",
+        "ytd-video-owner-renderer #channel-name a"
+    ];
+
+    for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (element && element.textContent.trim()) {
+            const channelName = element.textContent.trim();
+            console.log(`[interYT] Found channel name using ${selector}: ${channelName}`);
+            return channelName;
+        }
+    }
+    
+    console.warn("[interYT] Could not find channel name with any selector");
+    return null;
+}
+
+/**
+ * Extract video description from YouTube page with fallback selectors
+ */
+function getVideoDescription() {
+    const selectors = [
+        "#description-inline-expander yt-attributed-string",
+        "ytd-text-inline-expander[slot='content'] yt-attributed-string",
+        "#description yt-attributed-string",
+        "#description-inner yt-attributed-string"
+    ];
+
+    for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (element && element.textContent.trim()) {
+            const description = element.textContent.trim();
+            console.log(`[interYT] Found video description using ${selector}: ${description.substring(0, 100)}...`);
+            return description;
+        }
+    }
+    
+    console.warn("[interYT] Could not find video description with any selector");
+    return null;
+}
+
+/**
  * Fetch transcript from YouTube page with multiple fallback selectors
  */
 function fetchTranscript(sendResponse) {
@@ -73,7 +121,15 @@ function fetchTranscript(sendResponse) {
                 error: "Transcript is empty. Please ensure the transcript is visible." 
             });
         } else {
-            sendResponse({ transcript: fullTranscript });
+            // Extract additional context
+            const channelName = getChannelName();
+            const videoDescription = getVideoDescription();
+            
+            sendResponse({ 
+                transcript: fullTranscript,
+                channelName: channelName,
+                description: videoDescription
+            });
         }
     } catch (e) {
         console.error("[interYT] Error processing transcript:", e);

@@ -18,6 +18,7 @@
         <nav class="tab-nav">
             <button id="tab-qa" class="tab-item active">Q&A</button>
             <button id="tab-comments" class="tab-item">Comments</button>
+            <button id="tab-tools" class="tab-item">Tools</button>
         </nav>
 
         <div id="qa-tab-content" class="p-6">
@@ -29,7 +30,6 @@
                     Ask a question about the video's transcript.
                 </p>
             </header>
-
             <div class="space-y-6">
                 <div>
                     <label for="transcript" class="block text-sm font-medium text-gray-300 mb-2">
@@ -123,13 +123,141 @@
             </div>
         </div>
 
+        <div id="tools-tab-content" class="p-6 hidden">
+            <header class="mb-6 text-center">
+                <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient text-glow">
+                    Tools & Actions
+                </h1>
+                <p class="mt-2 text-gray-400">
+                    Powerful features to enhance your video watching experience.
+                </p>
+            </header>
+
+            <div class="space-y-6">
+                <div class="tool-section">
+                    <h3 class="text-lg font-semibold text-gray-200 mb-3">📝 Video Analysis</h3>
+                    <button id="summarize-video-btn" class="w-full quick-action-btn">
+                        <span class="tool-icon">📝</span>
+                        <div class="tool-info">
+                            <div class="tool-title">Summarize Video</div>
+                            <div class="tool-desc">Get a bullet-point summary of the entire transcript</div>
+                        </div>
+                    </button>
+                    <button id="related-videos-btn" class="w-full quick-action-btn mt-3">
+                        <span class="tool-icon">🎥</span>
+                        <div class="tool-info">
+                            <div class="tool-title">Find Related Videos</div>
+                            <div class="tool-desc">AI-powered suggestions for similar content</div>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="tool-section">
+                    <h3 class="text-lg font-semibold text-gray-200 mb-3">📤 Export & Share</h3>
+                    <button id="export-btn" class="w-full quick-action-btn">
+                        <span class="tool-icon">📄</span>
+                        <div class="tool-info">
+                            <div class="tool-title">Export to PDF</div>
+                            <div class="tool-desc">Save Q&A history, summaries, and comments</div>
+                        </div>
+                    </button>
+                    <button id="share-btn" class="w-full quick-action-btn mt-3">
+                        <span class="tool-icon">📤</span>
+                        <div class="tool-info">
+                            <div class="tool-title">Share</div>
+                            <div class="tool-desc">Send summaries via WhatsApp or Telegram</div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Summary and Related Videos Display -->
+                <div id="summary-container" class="mt-8 hidden">
+                    <div class="summary-header">
+                        <h3 class="text-xl font-semibold text-gray-200">📝 Video Summary</h3>
+                        <button id="close-summary-btn" class="close-btn">✕</button>
+                    </div>
+                    <div id="summary-loader" class="flex items-center justify-center space-x-3 hidden mt-4">
+                        <div class="spinner"></div>
+                        <span class="text-gray-400">Generating summary...</span>
+                    </div>
+                    <div id="summary-text" class="summary-content mt-4 p-4 bg-dark-input border-gray-600 rounded-lg text-gray-300">
+                    </div>
+                </div>
+
+                <div id="related-videos-container" class="mt-8 hidden">
+                    <div class="summary-header">
+                        <h3 class="text-xl font-semibold text-gray-200">🎥 Related Videos</h3>
+                        <button id="close-related-btn" class="close-btn">✕</button>
+                    </div>
+                    <div id="related-loader" class="flex items-center justify-center space-x-3 hidden mt-4">
+                        <div class="spinner"></div>
+                        <span class="text-gray-400">Finding related videos...</span>
+                    </div>
+                    <div id="related-videos-list" class="mt-4 space-y-3">
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
+    <!-- Modals at top level (outside tabs) -->
+    <div id="share-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="text-xl font-semibold text-gray-200">📤 Share Summary</h3>
+                <button id="close-share-modal" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body mt-4">
+                <p class="text-gray-400 mb-4">Share your Q&A summary or video insights:</p>
+                <div class="share-buttons">
+                    <button id="share-whatsapp-btn" class="share-btn whatsapp">
+                        <span class="share-icon">💬</span> WhatsApp
+                    </button>
+                    <button id="share-telegram-btn" class="share-btn telegram">
+                        <span class="share-icon">✈️</span> Telegram
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="export-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="text-xl font-semibold text-gray-200">📄 Export to PDF</h3>
+                <button id="close-export-modal" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body mt-4">
+                <p class="text-gray-400 mb-4">Export your Q&A history and summaries:</p>
+                <div class="export-options">
+                    <label class="export-option">
+                        <input type="checkbox" id="export-qa" checked>
+                        <span>Q&A History</span>
+                    </label>
+                    <label class="export-option">
+                        <input type="checkbox" id="export-summary">
+                        <span>Video Summary</span>
+                    </label>
+                    <label class="export-option">
+                        <input type="checkbox" id="export-comments">
+                        <span>Comment Summary</span>
+                    </label>
+                </div>
+                <button id="confirm-export-btn" class="w-full bg-gradient-button text-white font-bold py-3 px-6 rounded-lg shadow-lg transform-hover transition-all mt-4">
+                    Generate PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="w-full max-w-4xl bg-dark-card rounded-2xl shadow-2xl">
         <div style="text-align: center; padding: 1rem; border-top: 1px solid #293849; margin-top: 1rem;">
             <p style="font-size: 0.75rem; color: #7F8C9A;">
                 <a href="#" id="open-settings" style="color: #22D3EE; text-decoration: none;">⚙️ Configure API Key in Settings</a>
             </p>
         </div>
+    <script src="lib/jspdf.umd.min.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>
