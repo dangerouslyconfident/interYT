@@ -1222,29 +1222,65 @@ IMPORTANT:
             textContent += `${stripHtml(commentSummary)}\n\n`;
         }
 
-        // Full Comments
-        if (includeFullComments && currentComments && currentComments.length > 0) {
-            textContent += '-'.repeat(60) + '\n';
-            textContent += `Full Comments (${currentComments.length})\n`;
-            textContent += '-'.repeat(60) + '\n\n';
-            
-            currentComments.forEach((comment, index) => {
-                textContent += `[${index + 1}] ${comment.author}:\n`;
-                textContent += `${comment.text}\n\n`;
-            });
-            textContent += '\n';
+            // Full Comments
+            if (includeFullComments && currentComments && currentComments.length > 0) {
+                textContent += '-'.repeat(60) + '\n';
+                textContent += `Full Comments (${currentComments.length})\n`;
+                textContent += '-'.repeat(60) + '\n\n';
+                
+                // Process comments in chunks to handle large datasets efficiently
+                const chunkSize = 100;
+                for (let i = 0; i < currentComments.length; i += chunkSize) {
+                    const chunk = currentComments.slice(i, i + chunkSize);
+                    chunk.forEach((comment, chunkIndex) => {
+                        const globalIndex = i + chunkIndex + 1;
+                        const safeAuthor = comment.author?.trim() || 'Anonymous';
+                        const safeText = comment.text?.trim() || '(No content)';
+                        textContent += `[${globalIndex}] ${safeAuthor}:\n`;
+                        textContent += `${safeText}\n\n`;
+                    });
+                }
+                textContent += '\n';
+            }        // Split content into chunks if it's very large
+        const encoder = new TextEncoder();
+        const contentBytes = encoder.encode(textContent);
+        const maxChunkSize = 100 * 1024 * 1024; // 100MB chunks
+        
+        if (contentBytes.length > maxChunkSize) {
+            // For very large content, use streams
+            const stream = new Blob([textContent], { type: 'text/plain' }).stream();
+            const fileHandle = window.showSaveFilePicker({
+                suggestedName: 'interYT-export.txt',
+                types: [{
+                    description: 'Text file',
+                    accept: { 'text/plain': ['.txt'] }
+                }]
+            }).then(handle => handle.createWritable())
+              .then(writer => stream.pipeTo(writer))
+              .catch(error => {
+                  // Fallback to traditional method if showSaveFilePicker is not supported
+                  const blob = new Blob([textContent], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'interYT-export.txt';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+              });
+        } else {
+            // For smaller content, use traditional method
+            const blob = new Blob([textContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'interYT-export.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
-
-        // Create and download the text file
-        const blob = new Blob([textContent], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'interYT-export.txt';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
     }
 
     function stripHtml(html) {
@@ -1284,44 +1320,209 @@ IMPORTANT:
         });
     }
 
-    function formatShareText() {
-        let text = '🎥 *YouTube Video Insights*\n\n';
+    function formatShareText(platform = 'whatsapp') {
+        // Define platform-specific limits
+        const LIMITS = {
+            whatsapp: 65536, // WhatsApp limit ~65KB
+            telegram: 4096,  // Telegram limit 4096 characters
+        };
         
+        // Initialize message parts array
+        let messages = [];
+        let currentMessage = '🎥 *YouTube Video Insights*\n\n';
+        
+        // Helper function to add content and create new message if needed
+        function addContent(content, prefix = '', suffix = '\n\n') {
+            if (!content) return;
+            
+            const formattedContent = prefix + content + suffix;
+            const potentialLength = currentMessage.length + formattedContent.length;
+            
+            if (potentialLength > LIMITS[platform] && currentMessage.length > 0) {
+                // Current message would exceed limit, store it and start new one
+                messages.push(currentMessage);
+                currentMessage = formattedContent;
+            } else {
+                currentMessage += formattedContent;
+            }
+        }
+
+        // Add video URL
         if (currentVideoUrl) {
-            text += `Video: ${currentVideoUrl}\n\n`;
+            addContent(`Video: ${currentVideoUrl}`);
         }
 
+        // Add video summary
         if (videoSummary) {
-            text += `📝 Summary:\n${stripHtml(videoSummary)}\n\n`;
+            addContent(stripHtml(videoSummary), '📝 *Summary:*\n');
         }
 
+        // Add comment sentiment
         if (commentSummary) {
-            text += `💬 Comment Sentiment:\n${stripHtml(commentSummary)}\n\n`;
+            addContent(stripHtml(commentSummary), '💬 *Comment Sentiment:*\n');
         }
 
+        // Add Q&A highlights
         if (qaHistory.length > 0) {
-            text += `❓ Q&A Highlights:\n`;
+            addContent('❓ *Q&A Highlights:*\n');
             qaHistory.slice(0, 3).forEach((item, index) => {
-                text += `\nQ: ${item.question}\nA: ${stripHtml(item.answer).substring(0, 10000)}...\n`;
+                const qaText = `Q${index + 1}: ${item.question}\nA: ${stripHtml(item.answer)}`;
+                addContent(qaText, '', '\n\n');
             });
         }
 
-        text += '\n\n✨ Powered by interYT Extension';
-        
-        return text;
+        // Add footer to current message
+        const footer = '\n✨ Powered by interYT Extension';
+        if (currentMessage.length + footer.length <= LIMITS[platform]) {
+            currentMessage += footer;
+        }
+
+        // Add final message if not empty
+        if (currentMessage.length > 0) {
+            messages.push(currentMessage);
+        }
+
+        // Add message numbering if multiple messages
+        if (messages.length > 1) {
+            messages = messages.map((msg, index) => 
+                `(Part ${index + 1}/${messages.length})\n\n${msg}`
+            );
+        }
+
+        return messages;
     }
 
-    function shareToWhatsApp() {
-        const text = formatShareText();
-        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
+    async function shareToWhatsApp() {
+        const messages = formatShareText('whatsapp');
+        
+        // For single message, use traditional method
+        if (messages.length === 1) {
+            const url = `https://wa.me/?text=${encodeURIComponent(messages[0])}`;
+            window.open(url, '_blank');
+        } else {
+            // For multiple messages, use clipboard and provide instructions
+            try {
+                // Create a temporary textarea for copying
+                const textarea = document.createElement('textarea');
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                
+                // Show instructions modal
+                const instructionsDiv = document.createElement('div');
+                instructionsDiv.className = 'modal-overlay';
+                instructionsDiv.innerHTML = `
+                    <div class="modal-content bg-dark-card p-6 rounded-lg shadow-xl max-w-md">
+                        <h3 class="text-xl font-semibold text-gray-200 mb-4">Share Instructions</h3>
+                        <p class="text-gray-300 mb-4">The content will be copied in ${messages.length} parts due to length. Each part will be copied automatically when you click "Copy Next".</p>
+                        <p class="text-gray-400 mb-4">Current part: <span id="current-part">1</span>/${messages.length}</p>
+                        <button id="copy-next" class="w-full bg-gradient-button text-white font-bold py-3 px-6 rounded-lg shadow-lg transform-hover transition-all">
+                            Copy Next Part
+                        </button>
+                        <button id="open-whatsapp" class="w-full mt-3 btn-secondary text-white font-bold py-3 px-6 rounded-lg transition-all">
+                            Open WhatsApp Web
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(instructionsDiv);
+
+                let currentIndex = 0;
+                const copyNextBtn = document.getElementById('copy-next');
+                const openWhatsAppBtn = document.getElementById('open-whatsapp');
+                const currentPartSpan = document.getElementById('current-part');
+
+                copyNextBtn.addEventListener('click', () => {
+                    if (currentIndex < messages.length) {
+                        textarea.value = messages[currentIndex];
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        
+                        currentIndex++;
+                        currentPartSpan.textContent = currentIndex + 1;
+                        
+                        if (currentIndex >= messages.length) {
+                            copyNextBtn.textContent = 'All Parts Copied!';
+                            copyNextBtn.disabled = true;
+                        }
+                    }
+                });
+
+                openWhatsAppBtn.addEventListener('click', () => {
+                    window.open('https://web.whatsapp.com', '_blank');
+                });
+            } catch (error) {
+                console.error('Error in sharing to WhatsApp:', error);
+                alert('There was an error preparing the content for sharing. Please try again.');
+            }
+        }
         shareModal.classList.add('hidden');
     }
 
-    function shareToTelegram() {
-        const text = formatShareText();
-        const url = `https://t.me/share/url?url=${encodeURIComponent(currentVideoUrl || '')}&text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
+    async function shareToTelegram() {
+        const messages = formatShareText('telegram');
+        
+        // For single message, use traditional method
+        if (messages.length === 1) {
+            const url = `https://t.me/share/url?url=${encodeURIComponent(currentVideoUrl || '')}&text=${encodeURIComponent(messages[0])}`;
+            window.open(url, '_blank');
+        } else {
+            // For multiple messages, use clipboard and provide instructions
+            try {
+                // Create a temporary textarea for copying
+                const textarea = document.createElement('textarea');
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                
+                // Show instructions modal
+                const instructionsDiv = document.createElement('div');
+                instructionsDiv.className = 'modal-overlay';
+                instructionsDiv.innerHTML = `
+                    <div class="modal-content bg-dark-card p-6 rounded-lg shadow-xl max-w-md">
+                        <h3 class="text-xl font-semibold text-gray-200 mb-4">Share Instructions</h3>
+                        <p class="text-gray-300 mb-4">The content will be copied in ${messages.length} parts due to length. Each part will be copied automatically when you click "Copy Next".</p>
+                        <p class="text-gray-400 mb-4">Current part: <span id="current-part">1</span>/${messages.length}</p>
+                        <button id="copy-next" class="w-full bg-gradient-button text-white font-bold py-3 px-6 rounded-lg shadow-lg transform-hover transition-all">
+                            Copy Next Part
+                        </button>
+                        <button id="open-telegram" class="w-full mt-3 btn-secondary text-white font-bold py-3 px-6 rounded-lg transition-all">
+                            Open Telegram Web
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(instructionsDiv);
+
+                let currentIndex = 0;
+                const copyNextBtn = document.getElementById('copy-next');
+                const openTelegramBtn = document.getElementById('open-telegram');
+                const currentPartSpan = document.getElementById('current-part');
+
+                copyNextBtn.addEventListener('click', () => {
+                    if (currentIndex < messages.length) {
+                        textarea.value = messages[currentIndex];
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        
+                        currentIndex++;
+                        currentPartSpan.textContent = currentIndex + 1;
+                        
+                        if (currentIndex >= messages.length) {
+                            copyNextBtn.textContent = 'All Parts Copied!';
+                            copyNextBtn.disabled = true;
+                        }
+                    }
+                });
+
+                openTelegramBtn.addEventListener('click', () => {
+                    window.open('https://web.telegram.org', '_blank');
+                });
+            } catch (error) {
+                console.error('Error in sharing to Telegram:', error);
+                alert('There was an error preparing the content for sharing. Please try again.');
+            }
+        }
         shareModal.classList.add('hidden');
     }
 
