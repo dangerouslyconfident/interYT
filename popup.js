@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const commentSummaryContainer = document.getElementById('comment-summary-container');
     const commentSummaryLoader = document.getElementById('comment-summary-loader');
     const commentSummaryText = document.getElementById('comment-summary-text');
+    
 
     if (qaTabButton) {
         qaTabButton.addEventListener('click', () => switchTab('qa'));
@@ -124,6 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (clearHistoryButton) {
         clearHistoryButton.addEventListener('click', handleClearHistory);
     }
+
+    
 
     autoFetchTranscript();
     loadHistory();
@@ -617,76 +620,145 @@ ${question}
         commentSummaryText.classList.add('hidden');
         commentSummaryText.innerHTML = "";
         commentSummaryLoader.classList.remove('hidden');
-        
-        // Force a reflow to ensure loader is visible
-        void commentSummaryLoader.offsetHeight;
-
-        const commentsString = comments
-            .slice(0, 20) 
-            .map(c => `Author: ${c.author}\nComment: ${c.text}`)
-            .join('\n\n---\n\n');
-
-        const systemPrompt = `You are a YouTube channel analyst. You will be given a list of top comments from a video.
-Your job is to read them and provide a brief, 2-3 sentence summary of the overall viewer sentiment and opinion.
-Focus on the main themes. Are people generally positive, negative, or mixed? What are they talking about?
-Do not list individual comments. Provide a high-level summary.`;
-
-        const userQuery = `
-Here are the top comments:
----
-${commentsString}
----
-
-Please provide a brief summary of the viewer opinion:
-`;
-
-        const apiKey = await getApiKey(); 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-        const payload = {
-            contents: [{ parts: [{ text: userQuery }] }],
-            systemInstruction: {
-                parts: [{ text: systemPrompt }]
-            },
-            generationConfig: {
-                temperature: 0.3,
-                maxOutputTokens: 512,
-            }
-        };
 
         try {
+            const apiKey = await getApiKey();
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            // Use the top 20 comments we already parsed
+            const topComments = (comments || []).slice(0, 20).map(c => (c && c.text) ? c.text.trim() : '').filter(Boolean);
+            if (topComments.length === 0) {
+                throw new Error('No valid comments to summarize.');
+            }
+
+            const commentsText = topComments.join('\n---\n');
+
+            const systemPrompt = `You are a YouTube channel analyst. Read the comments and provide a concise 2-3 sentence summary of the overall viewer opinion and sentiment (positive/negative/mixed). Focus on the main themes and any notable consensus or disagreements. Do not list individual comments.`;
+
+            const userPrompt = `Comments:\n---\n${commentsText}\n---\nPlease provide a 2-3 sentence summary of the viewer opinion and sentiment.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: { temperature: 0.2, maxOutputTokens: 256 }
+            };
+
             const response = await fetchWithBackoff(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                const errorBody = await response.text();
-                throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
+                const body = await response.text().catch(() => '');
+                throw new Error(`API request failed: ${response.status} ${body}`);
             }
 
             const result = await response.json();
-            const candidate = result.candidates?.[0];
+            
 
-            // EXACTLY like Q&A function - simple extraction
-            if (candidate && candidate.content?.parts?.[0]?.text) {
-                const summary = candidate.content.parts[0].text;
-                console.log("[interYT] Successfully extracted summary");
-                commentSummary = summary;
-                commentSummaryText.innerHTML = formatAnswerForDisplay(summary);
-                commentSummaryText.classList.remove('hidden');
-            } else {
-                console.warn("[interYT] Unexpected API response structure:", result);
-                throw new Error("Could not extract summary from API response.");
+            // Try several common paths for the generated text (API shapes vary)
+            let summary = result?.candidates?.[0]?.content?.parts?.[0]?.text
+                || result?.candidates?.[0]?.content?.text
+                || result?.candidates?.[0]?.output_text
+                || result?.output?.[0]?.content?.parts?.[0]?.text
+                || result?.output?.text
+                || null;
+
+            // If not found, iterate candidates & parts to locate any text fields
+            if (!summary && Array.isArray(result?.candidates)) {
+                for (const cand of result.candidates) {
+                    if (cand?.content?.parts) {
+                        for (const p of cand.content.parts) {
+                            if (typeof p.text === 'string' && p.text.trim()) {
+                                summary = p.text.trim();
+                                break;
+                            }
+                        }
+                    }
+                    if (summary) break;
+                    if (typeof cand?.content?.text === 'string' && cand.content.text.trim()) {
+                        summary = cand.content.text.trim();
+                        break;
+                    }
+                    if (typeof cand?.output_text === 'string' && cand.output_text.trim()) {
+                        summary = cand.output_text.trim();
+                        break;
+                    }
+                }
             }
 
-        } catch (error) {
-            console.error("[interYT] Error summarizing comments:", error);
-            commentSummaryText.innerHTML = `<p class="text-red-400">😕 Could not generate a summary. ${error.message}</p>`;
+            // As a last attempt, search the whole response for any plausible text
+            if (!summary) {
+                const fallback = findTextInObject(result);
+                if (fallback) summary = fallback;
+            }
+
+            if (!summary) {
+                console.warn('[interYT] No summary found in API response (checked multiple fields).');
+                throw new Error('No summary returned by API.');
+            }
+
+            commentSummary = summary;
+            commentSummaryText.innerHTML = formatAnswerForDisplay(summary);
             commentSummaryText.classList.remove('hidden');
+            commentsStatus.textContent = `Summary generated from ${topComments.length} comments.`;
+            commentsStatus.classList.remove('text-red-400');
+
+        } catch (err) {
+            console.error('[interYT] Comment summary error:', err);
+            const msg = err && err.message ? err.message : 'Could not generate summary. Please try again.';
+
+            // If API returned no summary, provide a simple local fallback summary so user sees something
+            if (msg.toLowerCase().includes('no summary returned by api') || msg.toLowerCase().includes('no summary returned')) {
+                const local = generateLocalCommentSummary(comments);
+                commentSummary = local;
+                commentSummaryText.innerHTML = formatAnswerForDisplay(local);
+                commentSummaryText.classList.remove('hidden');
+                commentsStatus.textContent = 'Summary generated locally (API failed)';
+                commentsStatus.classList.remove('text-red-400');
+            } else {
+                commentSummaryText.innerHTML = `<p class="text-red-400">${msg}</p>`;
+                commentSummaryText.classList.remove('hidden');
+                commentsStatus.textContent = `Summary error: ${msg}`;
+                commentsStatus.classList.add('text-red-400');
+            }
+            
         } finally {
             if (commentSummaryLoader) commentSummaryLoader.classList.add('hidden');
+        }
+    }
+
+    // Simple local summarizer as a fallback when the API fails
+    function generateLocalCommentSummary(comments) {
+        try {
+            const top = (comments || []).slice(0, 20).map(c => (c && c.text) ? c.text : '').filter(Boolean);
+            if (top.length === 0) return 'No comments available to summarize.';
+
+            const text = top.join(' ');
+            // small stopword list
+            const stop = new Set(['the','and','is','to','a','in','of','it','for','that','this','on','with','you','are','was','i','my','they','we','be','have','has','but','not','so','if','or','as','just']);
+
+            const words = text.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w => w && !stop.has(w) && w.length>2);
+            const freq = {};
+            for (const w of words) freq[w] = (freq[w]||0)+1;
+            const topWords = Object.keys(freq).sort((a,b)=>freq[b]-freq[a]).slice(0,3);
+
+            const positive = ['good','great','love','awesome','amazing','nice','best','helpful','interesting','cool','like','fantastic'];
+            const negative = ['bad','terrible','hate','worst','disappoint','disappointed','awful','boring','stupid','fake','annoying'];
+            let posCount = 0, negCount = 0;
+            for (const w of words) {
+                if (positive.includes(w)) posCount++;
+                if (negative.includes(w)) negCount++;
+            }
+            let sentiment = 'mixed';
+            if (posCount > negCount * 1.2 && posCount >= 2) sentiment = 'generally positive';
+            else if (negCount > posCount * 1.2 && negCount >= 2) sentiment = 'generally negative';
+
+            const themes = topWords.length ? topWords.join(', ') : 'varied topics';
+            return `Viewers discuss: ${themes}. Overall sentiment appears ${sentiment}.`;
+        } catch (e) {
+            return 'Could not generate a local summary.';
         }
     }
 
